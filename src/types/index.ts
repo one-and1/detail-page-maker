@@ -23,3 +23,10 @@ export interface DetailSection {
   description: string;
   copy: string;
 }
+
+export interface PersistedProject {
+  product: ProductInfo;
+  sections: DetailSection[];
+  updatedAt: string;
+  schemaVersion: number;
+}
