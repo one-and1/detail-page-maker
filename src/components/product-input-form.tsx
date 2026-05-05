@@ -18,7 +18,10 @@ export function ProductInputForm({ value, onChange }: Props) {
   };
 
   return (
-    <form className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+    <form
+      className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm"
+      onSubmit={(event) => event.preventDefault()}
+    >
       <div className="mb-4">
         <h2 className="text-base font-semibold">상품 정보 입력</h2>
         <p className="mt-1 text-xs leading-5 text-zinc-500">
