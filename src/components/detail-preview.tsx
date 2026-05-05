@@ -1,83 +1,53 @@
-"use client";
-
-import type { DetailSectionDraft, ProductContextForm } from "@/src/types/detail-page";
+import type { DetailSection, ProductInfo } from "@/src/types";
 
 type Props = {
-  product: ProductContextForm;
-  sections: DetailSectionDraft[];
+  product: ProductInfo;
+  sections: DetailSection[];
 };
 
-const toneKo: Record<ProductContextForm["tone"], string> = {
-  professional: "전문·신뢰",
-  friendly: "친근·대화형",
-  luxury: "럭셔리·격식",
-  minimal: "미니멀·건조",
+const toneLabel: Record<ProductInfo["tone"], string> = {
+  clear: "명확하고 실용적",
+  friendly: "친근한 설명형",
+  premium: "프리미엄",
+  minimal: "미니멀",
 };
 
 export function DetailPreview({ product, sections }: Props) {
-  const upsFirstLine =
-    product.usp
-      .split("\n")
-      .map((l) => l.replace(/^[\s\-•*]+/, "").trim())
-      .find(Boolean) ?? "";
-
   return (
-    <div className="rounded-xl border border-zinc-200 bg-[#fafafa] shadow-inner dark:border-zinc-800 dark:bg-zinc-950/80">
-      <div className="flex flex-col gap-1 border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
-        <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-500">
-          고객 화면 미리보기
-        </span>
-        <h3 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-          {product.brandName} · {product.productName}
-        </h3>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          프로젝트: {product.projectName} · 톤: {toneKo[product.tone]}
+    <article className="min-w-0 rounded-lg border border-zinc-200 bg-white shadow-sm">
+      <header className="border-b border-zinc-200 px-5 py-4">
+        <p className="text-xs font-medium text-zinc-500">섹션 미리보기</p>
+        <h2 className="mt-1 text-lg font-semibold tracking-tight">
+          {product.brandName} {product.productName}
+        </h2>
+        <p className="mt-1 text-xs text-zinc-500">
+          {product.projectName} · {toneLabel[product.tone]}
         </p>
-      </div>
+      </header>
 
-      <div className="mx-auto max-w-[640px] space-y-0 bg-white px-6 py-10 text-[15px] leading-relaxed text-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 sm:px-10">
-        {upsFirstLine ? (
-          <p className="mb-10 border-l-4 border-zinc-300 pl-4 text-[15px] text-zinc-700 dark:border-zinc-600 dark:text-zinc-300">
-            {upsFirstLine}
-          </p>
-        ) : null}
-
-        {sections.map((section, idx) => (
+      <div className="mx-auto max-w-2xl px-5 py-8">
+        {sections.map((section, index) => (
           <section
             key={section.id}
-            className={idx > 0 ? "mt-14 border-t border-zinc-100 pt-14 dark:border-zinc-900" : undefined}
+            className={index === 0 ? "" : "mt-10 border-t border-zinc-100 pt-10"}
           >
-            <h4 className="mb-4 text-[13px] font-semibold uppercase tracking-wide text-zinc-400 dark:text-zinc-500">
-              {section.label}
-            </h4>
-            <div className="whitespace-pre-wrap text-[15px] leading-7 text-zinc-800 dark:text-zinc-200">
-              {section.body}
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
+              {section.kind}
+            </p>
+            <h3 className="mt-2 text-xl font-semibold tracking-tight">
+              {section.title}
+            </h3>
+            <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-zinc-700">
+              {section.copy}
             </div>
           </section>
         ))}
 
-        {product.specs.trim() ? (
-          <aside className="mt-14 rounded-xl border border-dashed border-zinc-200 bg-zinc-50 p-6 text-[13px] text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-400">
-            <span className="mb-3 block font-semibold text-zinc-700 dark:text-zinc-300">
-              참고 스펙 (편집 영역 원문)
-            </span>
-            <div className="whitespace-pre-wrap leading-6">{product.specs}</div>
-          </aside>
-        ) : null}
-
-        <div className="mt-14 border-t border-zinc-100 pt-10 text-[11px] text-zinc-400 dark:border-zinc-900 dark:text-zinc-600">
-          <p>
-            타깃 요약 문구 길면 상세 기획으로 이동 권장. 법무 메모는 고객 화면에
-            노출하지 않습니다.
-          </p>
-          {product.legalNotes.trim() ? (
-            <p className="mt-4 hidden text-zinc-500 sm:block dark:text-zinc-500">
-              (내부) {product.legalNotes.slice(0, 200)}
-              {product.legalNotes.length > 200 ? "…" : ""}
-            </p>
-          ) : null}
-        </div>
+        <footer className="mt-10 border-t border-zinc-100 pt-6 text-xs leading-6 text-zinc-500">
+          <p>금지 표현: {product.forbiddenPhrases || "입력 없음"}</p>
+          <p>내부 메모: {product.notes || "입력 없음"}</p>
+        </footer>
       </div>
-    </div>
+    </article>
   );
 }

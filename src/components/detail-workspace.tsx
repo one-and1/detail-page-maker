@@ -1,366 +1,108 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import type { DetailSectionDraft, ProductContextForm } from "@/src/types/detail-page";
-import type { RevisionHistoryEntry } from "@/src/types/persisted-project";
-import { applyPartialSectionRevision } from "@/src/lib/apply-partial-section-revision";
-import { generateSectionCopy } from "@/src/lib/generate-section-copy";
-import { loadProject, saveProject } from "@/src/lib/project-storage";
-import {
-  cappedHistoryAppend,
-  clipSnippet,
-} from "@/src/lib/revision-history-utils";
-import { DUMMY_PRODUCT_CONTEXT, DUMMY_SECTIONS } from "@/src/lib/dummy-detail-data";
+import { useMemo, useState } from "react";
+import { DetailPreview } from "@/src/components/detail-preview";
 import { ProductInputForm } from "@/src/components/product-input-form";
 import { SectionListPanel } from "@/src/components/section-list-panel";
-import { DetailPreview } from "@/src/components/detail-preview";
+import type { DetailSection, ProductInfo } from "@/src/types";
 
-function makeHistoryId(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
+const initialProduct: ProductInfo = {
+  projectName: "신제품 상세페이지 초안",
+  clientName: "개인 외주 클라이언트",
+  brandName: "온하루",
+  productName: "웜핏 발열 패딩 베스트",
+  category: "겨울 의류 / 생활 방한용품",
+  targetAudience: "출퇴근과 야외 활동이 잦고 가볍지만 따뜻한 방한 아이템을 찾는 30~50대 고객",
+  tone: "clear",
+  usp: "가벼운 착용감, 분리형 발열 패드, 생활 방수 원단, 쉬운 세탁 관리",
+  specs: "겉감: 폴리에스터 100%\n충전재: 경량 패딩\n사이즈: S, M, L, XL\n색상: 블랙, 차콜",
+  forbiddenPhrases: "최고, 1위, 완치, 무조건, 과장된 효능 표현",
+  notes: "의료기기가 아니며 체온 유지 보조 목적의 제품으로 표현한다.",
+};
 
-function buildEntry(
-  partial: Omit<RevisionHistoryEntry, "id" | "at"> & {
-    id?: string;
-    at?: number;
-  },
-): RevisionHistoryEntry {
-  return {
-    id: partial.id ?? makeHistoryId(),
-    at: partial.at ?? Date.now(),
-    kind: partial.kind,
-    sectionId: partial.sectionId,
-    sectionLabel: partial.sectionLabel,
-    summary: partial.summary,
-    detail: partial.detail,
-    snippetBefore: partial.snippetBefore,
-    snippetAfter: partial.snippetAfter,
-  };
+function makeSections(product: ProductInfo): DetailSection[] {
+  const productName = product.productName || "상품명";
+  const brandName = product.brandName || "브랜드";
+  const usp = product.usp || "핵심 장점을 입력하면 이 영역의 더미 카피에 반영됩니다.";
+  const specs = product.specs || "스펙 정보를 입력하면 구매 전 확인 영역에 반영됩니다.";
+
+  return [
+    {
+      id: "hero",
+      kind: "hero",
+      title: "히어로",
+      description: "첫 화면에서 상품의 핵심 인상을 잡는 섹션",
+      copy: `${brandName} ${productName}\n\n매일 입는 방한 아이템을 더 가볍고 단정하게. 필요한 기능만 정리해 고객이 첫 화면에서 상품의 용도를 바로 이해하도록 구성합니다.`,
+    },
+    {
+      id: "usp",
+      kind: "usp",
+      title: "핵심 USP",
+      description: "고객이 기억해야 할 차별점 요약",
+      copy: `이 상품의 핵심 포인트\n${usp
+        .split(/[\n,]/)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => `- ${item}`)
+        .join("\n")}`,
+    },
+    {
+      id: "spec",
+      kind: "spec",
+      title: "스펙 안내",
+      description: "소재, 구성, 사이즈 등 구매 판단 정보",
+      copy: `구매 전 확인하세요\n${specs}`,
+    },
+    {
+      id: "comparison",
+      kind: "comparison",
+      title: "비교/문제 해결",
+      description: "기존 불편과 이 상품의 해결 방식을 연결",
+      copy: `두꺼운 외투가 부담스러운 날에도 ${productName}은 필요한 보온감과 활동성을 함께 고려합니다. 고객이 느끼는 불편을 먼저 짚고, 상품의 기능을 해결책으로 보여주는 구성입니다.`,
+    },
+    {
+      id: "faq",
+      kind: "faq",
+      title: "FAQ",
+      description: "반품, 세탁, 사용법 등 반복 문의 대응",
+      copy: `Q. 세탁은 어떻게 하나요?\nA. 구성품을 분리한 뒤 케어라벨 기준에 맞춰 관리하도록 안내합니다.\n\nQ. 어떤 고객에게 적합한가요?\nA. ${product.targetAudience || "주요 타깃 고객"}에게 맞춘 사용 상황을 제안합니다.`,
+    },
+    {
+      id: "cta",
+      kind: "cta",
+      title: "구매 안내",
+      description: "옵션 선택과 구매 전 확인 사항 정리",
+      copy: `${product.category || "카테고리"} 상품입니다. 사이즈, 색상, 구성품을 확인한 뒤 구매하도록 안내하고, 금지 표현은 사용하지 않는 방향으로 마무리합니다.`,
+    },
+  ];
 }
 
 export function DetailWorkspace() {
-  const [product, setProduct] = useState<ProductContextForm>(DUMMY_PRODUCT_CONTEXT);
-  const [sections, setSections] = useState<DetailSectionDraft[]>(DUMMY_SECTIONS);
-  const [selectedId, setSelectedId] = useState<string | null>(
-    DUMMY_SECTIONS[0]?.id ?? null,
-  );
-
-  const [revisionHistory, setRevisionHistory] = useState<RevisionHistoryEntry[]>(
-    [],
-  );
-
-  const [hydrated, setHydrated] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
-
-  const baselineBodiesRef = useRef<Record<string, string>>({});
-  const productCommittedRef = useRef<string>(
-    JSON.stringify(DUMMY_PRODUCT_CONTEXT),
-  );
-  const sectionsRef = useRef(sections);
-  const bodyTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
-
-  useEffect(() => {
-    sectionsRef.current = sections;
-  }, [sections]);
-
-  useEffect(
-    () => () => {
-      bodyTimersRef.current.forEach((t) => clearTimeout(t));
-      bodyTimersRef.current.clear();
-    },
-    [],
-  );
-
-  const clearBodyTimer = useCallback((sectionId: string) => {
-    const t = bodyTimersRef.current.get(sectionId);
-    if (t !== undefined) {
-      clearTimeout(t);
-      bodyTimersRef.current.delete(sectionId);
-    }
-  }, []);
-
-  useEffect(() => {
-    const doc = loadProject();
-    if (doc) {
-      setProduct(doc.product);
-      setSections(doc.sections);
-      setRevisionHistory(doc.revisionHistory);
-      setSelectedId(doc.sections[0]?.id ?? null);
-      setLastSavedAt(doc.savedAt);
-      productCommittedRef.current = JSON.stringify(doc.product);
-      baselineBodiesRef.current = Object.fromEntries(
-        doc.sections.map((s) => [s.id, s.body]),
-      );
-    } else {
-      productCommittedRef.current = JSON.stringify(DUMMY_PRODUCT_CONTEXT);
-      baselineBodiesRef.current = Object.fromEntries(
-        DUMMY_SECTIONS.map((s) => [s.id, s.body]),
-      );
-    }
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    const t = setTimeout(() => {
-      const at = saveProject({ product, sections, revisionHistory });
-      if (at !== null) setLastSavedAt(at);
-    }, 450);
-    return () => clearTimeout(t);
-  }, [hydrated, product, sections, revisionHistory]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    const t = setTimeout(() => {
-      const json = JSON.stringify(product);
-      if (json === productCommittedRef.current) return;
-      productCommittedRef.current = json;
-      setRevisionHistory((h) =>
-        cappedHistoryAppend(
-          h,
-          buildEntry({
-            kind: "product_edit",
-            summary: "상품 정보(폼) 변경",
-            detail: clipSnippet(
-              `${product.brandName} · ${product.productName}`,
-              120,
-            ),
-          }),
-        ),
-      );
-    }, 1600);
-    return () => clearTimeout(t);
-  }, [product, hydrated]);
-
-  const [revisionError, setRevisionError] = useState<{
-    id: string;
-    message: string;
-  } | null>(null);
-
-  const onBodyChange = useCallback(
-    (id: string, body: string) => {
-      setSections((prev) =>
-        prev.map((s) => (s.id === id ? { ...s, body } : s)),
-      );
-
-      clearBodyTimer(id);
-      bodyTimersRef.current.set(
-        id,
-        setTimeout(() => {
-          bodyTimersRef.current.delete(id);
-          const row = sectionsRef.current.find((s) => s.id === id);
-          const currentBody = row?.body ?? "";
-          const base = baselineBodiesRef.current[id] ?? "";
-          if (currentBody === base) return;
-          const label = row?.label ?? id;
-          setRevisionHistory((h) =>
-            cappedHistoryAppend(
-              h,
-              buildEntry({
-                kind: "section_body_edit",
-                sectionId: id,
-                sectionLabel: label,
-                summary: `「${label}」본문 직접 편집`,
-                snippetBefore: clipSnippet(base),
-                snippetAfter: clipSnippet(currentBody),
-              }),
-            ),
-          );
-          baselineBodiesRef.current[id] = currentBody;
-        }, 900),
-      );
-    },
-    [clearBodyTimer],
-  );
-
-  const onGenerateSection = useCallback(
-    (id: string) => {
-      let afterBody = "";
-      let entry: RevisionHistoryEntry | null = null;
-      clearBodyTimer(id);
-      setSections((prev) => {
-        const row = prev.find((s) => s.id === id);
-        if (!row) return prev;
-        afterBody = generateSectionCopy(product, {
-          kind: row.kind,
-          label: row.label,
-        });
-        entry = buildEntry({
-          kind: "section_generate",
-          sectionId: id,
-          sectionLabel: row.label,
-          summary: `「${row.label}」카피 생성(덮어쓰기)`,
-          snippetBefore: clipSnippet(row.body),
-          snippetAfter: clipSnippet(afterBody),
-        });
-        return prev.map((s) =>
-          s.id === id ? { ...s, body: afterBody } : s,
-        );
-      });
-      if (entry) {
-        setRevisionHistory((h) => cappedHistoryAppend(h, entry!));
-        baselineBodiesRef.current[id] = afterBody;
-      }
-    },
-    [product, clearBodyTimer],
-  );
-
-  const onReviseDraftChange = useCallback((id: string, reviseDraft: string) => {
-    setRevisionError((prev) => (prev?.id === id ? null : prev));
-    setSections((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, reviseDraft } : s)),
-    );
-  }, []);
-
-  const onApplyPartialRevision = useCallback((id: string) => {
-    let feedback: { id: string; message: string } | null = null;
-    let successEntry: RevisionHistoryEntry | null = null;
-    let newFullBody = "";
-
-    clearBodyTimer(id);
-    setSections((prev) => {
-      const row = prev.find((s) => s.id === id);
-      if (!row) return prev;
-      const res = applyPartialSectionRevision(row.body, row.reviseDraft);
-      if (!res.ok) {
-        feedback = { id, message: res.message };
-        return prev;
-      }
-      feedback = null;
-      newFullBody = res.body;
-      successEntry = buildEntry({
-        kind: "section_partial",
-        sectionId: id,
-        sectionLabel: row.label,
-        summary: `「${row.label}」부분 반영`,
-        detail: clipSnippet(row.reviseDraft, 400),
-        snippetBefore: clipSnippet(row.body),
-        snippetAfter: clipSnippet(res.body),
-      });
-      return prev.map((s) =>
-        s.id !== id ? s : { ...s, body: res.body, reviseDraft: "" },
-      );
-    });
-    setRevisionError(feedback);
-
-    const appliedPartial = successEntry;
-    if (appliedPartial !== null && newFullBody !== "") {
-      const entryRow = appliedPartial;
-      setRevisionHistory((h) => cappedHistoryAppend(h, entryRow));
-      baselineBodiesRef.current[id] = newFullBody;
-    }
-  }, [clearBodyTimer]);
-
-  const lastSavedLabel = useMemo(() => {
-    if (lastSavedAt === null) return "—";
-    try {
-      return new Date(lastSavedAt).toLocaleString("ko-KR", {
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return "—";
-    }
-  }, [lastSavedAt]);
-
-  const recentHistoryRows = [...revisionHistory].slice(-14).reverse();
+  const [product, setProduct] = useState<ProductInfo>(initialProduct);
+  const sections = useMemo(() => makeSections(product), [product]);
 
   return (
-    <div className="flex min-h-full flex-col">
-      <div className="border-b border-zinc-200 bg-white px-6 py-5 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <h1 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              상세페이지 제작기
-            </h1>
-            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-              작업 상태는 브라우저{" "}
-              <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                localStorage
-              </span>
-              에 자동 저장됩니다. «생성»은 해당 섹션만 덮어쓰며, 접두 규칙 «부분
-              반영»과 편집·폼 변경은 이력에 쌓입니다.
-            </p>
-          </div>
-          <div className="shrink-0 space-y-1 text-right">
-            <p className="text-[11px] text-zinc-500 dark:text-zinc-500">
-              {hydrated ? "저장 동기 완료" : "복원 준비 중…"}
-            </p>
-            <p className="text-xs font-medium text-zinc-800 dark:text-zinc-100">
-              마지막 저장 {lastSavedLabel}
-            </p>
-            <p className="text-[11px] text-zinc-500">
-              수정 이력{" "}
-              <span className="font-semibold text-zinc-800 dark:text-zinc-100">
-                {revisionHistory.length}
-              </span>
-              건
-            </p>
-            <details className="text-left [&_summary]:cursor-pointer [&_summary]:text-[11px] [&_summary]:text-zinc-600 dark:[&_summary]:text-zinc-400">
-              <summary>최근 이력 (최대 14건 표시)</summary>
-              <ol className="mt-2 max-h-40 overflow-auto rounded-lg border border-zinc-100 bg-zinc-50 px-2 py-1.5 text-[10px] leading-relaxed text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-400">
-                {recentHistoryRows.length === 0 ? (
-                  <li className="list-inside list-decimal py-0.5">
-                    아직 기록된 이력이 없습니다.
-                  </li>
-                ) : (
-                  recentHistoryRows.map((e) => {
-                    const t = new Date(e.at).toLocaleTimeString("ko-KR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    });
-                    return (
-                      <li
-                        key={e.id}
-                        className="list-inside list-decimal py-0.5"
-                      >
-                        [{t}] {e.summary}
-                      </li>
-                    );
-                  })
-                )}
-              </ol>
-            </details>
-          </div>
+    <main className="min-h-screen bg-zinc-100 text-zinc-950">
+      <header className="border-b border-zinc-200 bg-white px-5 py-4">
+        <div className="mx-auto flex max-w-7xl flex-col gap-1">
+          <p className="text-xs font-medium text-zinc-500">개인 외주용 MVP</p>
+          <h1 className="text-xl font-semibold tracking-tight">상세페이지 제작기</h1>
+          <p className="text-sm text-zinc-500">
+            현재 단계는 API 호출 없이 입력값과 더미 카피만으로 섹션 미리보기를 조립합니다.
+          </p>
         </div>
-      </div>
+      </header>
 
-      <div className="flex min-h-[min(100vh-12rem,720px)] flex-1 flex-col lg:flex-row">
-        <aside className="w-full shrink-0 border-b border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950 lg:w-[46%] lg:border-b-0 lg:border-r xl:w-[42%]">
+      <div className="mx-auto grid max-w-7xl gap-5 px-5 py-5 lg:grid-cols-[420px_minmax(0,1fr)]">
+        <aside className="min-w-0">
           <ProductInputForm value={product} onChange={setProduct} />
         </aside>
 
-        <section className="flex min-h-0 flex-1 flex-col bg-zinc-50/80 p-6 dark:bg-zinc-950/50">
-          <SectionListPanel
-            sections={sections}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onBodyChange={onBodyChange}
-            onGenerateSection={onGenerateSection}
-            onReviseDraftChange={onReviseDraftChange}
-            onApplyPartialRevision={onApplyPartialRevision}
-            revisionError={revisionError}
-          />
+        <section className="grid min-w-0 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+          <SectionListPanel sections={sections} />
+          <DetailPreview product={product} sections={sections} />
         </section>
       </div>
-
-      <footer className="border-t border-zinc-200 bg-zinc-100/80 p-6 dark:border-zinc-800 dark:bg-zinc-950/80">
-        <DetailPreview product={product} sections={sections} />
-      </footer>
-    </div>
+    </main>
   );
 }
