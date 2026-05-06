@@ -59,6 +59,18 @@ export function DetailWorkspace() {
     setStorageMessage("저장되지 않은 변경사항이 있습니다.");
   };
 
+  const handleSectionCopyChange = (
+    sectionId: DetailSection["id"],
+    copy: string,
+  ) => {
+    setSections((currentSections) =>
+      currentSections.map((section) =>
+        section.id === sectionId ? { ...section, copy } : section,
+      ),
+    );
+    setStorageMessage("저장되지 않은 섹션 수정이 있습니다.");
+  };
+
   const handleSave = () => {
     const draft = saveProjectDraft({ product, sections });
 
@@ -161,7 +173,11 @@ export function DetailWorkspace() {
 
         <section className="grid min-w-0 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
           <SectionListPanel sections={sections} />
-          <DetailPreview product={product} sections={sections} />
+          <DetailPreview
+            product={product}
+            sections={sections}
+            onSectionCopyChange={handleSectionCopyChange}
+          />
         </section>
       </div>
     </main>
