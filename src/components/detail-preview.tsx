@@ -7,6 +7,7 @@ type Props = {
   product: ProductInfo;
   sections: DetailSection[];
   onSectionCopyChange: (sectionId: DetailSection["id"], copy: string) => void;
+  onSectionRegenerate: (sectionId: DetailSection["id"]) => void;
 };
 
 const toneLabel: Record<ProductInfo["tone"], string> = {
@@ -35,6 +36,7 @@ export function DetailPreview({
   product,
   sections,
   onSectionCopyChange,
+  onSectionRegenerate,
 }: Props) {
   const [editingSectionId, setEditingSectionId] = useState<
     DetailSection["id"] | null
@@ -99,6 +101,15 @@ export function DetailPreview({
     onSectionCopyChange(sectionId, draftCopy);
     cancelEditing();
   };
+
+  const regenerateSection = (sectionId: DetailSection["id"]) => {
+    onSectionRegenerate(sectionId);
+
+    if (editingSectionId === sectionId) {
+      cancelEditing();
+    }
+  };
+
   const projectName = product.projectName.trim() || FALLBACK_PROJECT_NAME;
 
   return (
@@ -161,6 +172,13 @@ export function DetailPreview({
                     onClick={() => copyText(formatSectionForCopy(section), section.id)}
                   >
                     복사
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100"
+                    onClick={() => regenerateSection(section.id)}
+                  >
+                    다시 생성
                   </button>
                   {editingSectionId !== section.id ? (
                     <button

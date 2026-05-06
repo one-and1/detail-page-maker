@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { DetailPreview } from "@/src/components/detail-preview";
 import { ProductInputForm } from "@/src/components/product-input-form";
 import { SectionListPanel } from "@/src/components/section-list-panel";
+import { generateDummySectionCopy } from "@/src/lib/dummy-generator";
 import { makeSections } from "@/src/lib/make-sections";
 import {
   clearProjectDraft,
@@ -72,6 +73,17 @@ export function DetailWorkspace() {
       ),
     );
     setStorageMessage("저장되지 않은 섹션 수정이 있습니다.");
+  };
+
+  const handleSectionRegenerate = (sectionId: DetailSection["id"]) => {
+    setSections((currentSections) =>
+      currentSections.map((section) =>
+        section.id === sectionId
+          ? { ...section, copy: generateDummySectionCopy(product, section) }
+          : section,
+      ),
+    );
+    setStorageMessage("저장되지 않은 섹션 더미 카피가 생성되었습니다.");
   };
 
   const handleSave = () => {
@@ -190,6 +202,7 @@ export function DetailWorkspace() {
             product={product}
             sections={sections}
             onSectionCopyChange={handleSectionCopyChange}
+            onSectionRegenerate={handleSectionRegenerate}
           />
         </section>
       </div>
