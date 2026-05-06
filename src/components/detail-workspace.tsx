@@ -12,6 +12,9 @@ import {
 } from "@/src/lib/project-storage";
 import type { DetailSection, ProductInfo } from "@/src/types";
 
+const FALLBACK_PROJECT_NAME = "새 프로젝트";
+const FALLBACK_CLIENT_NAME = "클라이언트 미지정";
+
 const initialProduct: ProductInfo = {
   projectName: "신제품 상세페이지 초안",
   clientName: "개인 외주 클라이언트",
@@ -118,6 +121,8 @@ export function DetailWorkspace() {
         timeStyle: "short",
       }).format(new Date(lastSavedAt))
     : "저장 전";
+  const currentProjectName = product.projectName.trim() || FALLBACK_PROJECT_NAME;
+  const currentClientName = product.clientName.trim() || FALLBACK_CLIENT_NAME;
 
   return (
     <main className="min-h-screen bg-zinc-100 text-zinc-950">
@@ -132,6 +137,14 @@ export function DetailWorkspace() {
               현재 단계는 API 호출 없이 입력값과 더미 카피만으로 섹션 미리보기를
               조립합니다.
             </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-sm">
+              <span className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-1.5 font-medium text-zinc-800">
+                {currentProjectName}
+              </span>
+              <span className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-zinc-600">
+                {currentClientName}
+              </span>
+            </div>
           </div>
 
           <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600 lg:min-w-80">

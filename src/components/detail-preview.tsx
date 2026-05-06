@@ -16,6 +16,8 @@ const toneLabel: Record<ProductInfo["tone"], string> = {
   minimal: "미니멀",
 };
 
+const FALLBACK_PROJECT_NAME = "새 프로젝트";
+
 type CopyTarget = "all" | DetailSection["id"];
 type CopyStatus = {
   kind: "success" | "error";
@@ -97,6 +99,7 @@ export function DetailPreview({
     onSectionCopyChange(sectionId, draftCopy);
     cancelEditing();
   };
+  const projectName = product.projectName.trim() || FALLBACK_PROJECT_NAME;
 
   return (
     <article className="min-w-0 rounded-lg border border-zinc-200 bg-white shadow-sm">
@@ -108,7 +111,7 @@ export function DetailPreview({
               {product.brandName} {product.productName}
             </h2>
             <p className="mt-1 text-xs text-zinc-500">
-              {product.projectName} · {toneLabel[product.tone]}
+              {projectName} · {toneLabel[product.tone]}
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
