@@ -17,10 +17,25 @@ import {
   loadProjectDraft,
   saveProjectDraft,
 } from "@/src/lib/project-storage";
+import {
+  clearUsageStats,
+  loadUsageStats,
+  recordCacheHit,
+  recordCacheMiss,
+  type UsageStats,
+} from "@/src/lib/usage-tracker";
 import type { DetailSection, ProductInfo } from "@/src/types";
 
 const FALLBACK_PROJECT_NAME = "새 프로젝트";
 const FALLBACK_CLIENT_NAME = "클라이언트 미지정";
+
+const initialUsageStats: UsageStats = {
+  totalGenerations: 0,
+  cacheHits: 0,
+  cacheMisses: 0,
+  estimatedSavedRequests: 0,
+  lastGeneratedAt: null,
+};
 
 const initialProduct: ProductInfo = {
   projectName: "신제품 상세페이지 초안",
@@ -45,11 +60,13 @@ export function DetailWorkspace() {
   const [storageMessage, setStorageMessage] = useState(
     "저장된 작업을 확인하는 중입니다.",
   );
+  const [usageStats, setUsageStats] = useState<UsageStats>(initialUsageStats);
   const dummyGenerationIndexRef = useRef(0);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       const draft = loadProjectDraft();
+      setUsageStats(loadUsageStats());
 
       if (draft) {
         setProduct(draft.product);
@@ -98,6 +115,7 @@ export function DetailWorkspace() {
     const cachedCopy = getCachedSectionCopy(cacheKey);
 
     if (cachedCopy) {
+      setUsageStats(recordCacheHit());
       setSections((currentSections) =>
         currentSections.map((section) =>
           section.id === sectionId
@@ -129,11 +147,25 @@ export function DetailWorkspace() {
         section.id === sectionId ? { ...section, copy: generatedCopy } : section,
       ),
     );
+    setUsageStats(recordCacheMiss(generatedAt));
     setStorageMessage(
       saved
         ? "새 더미 생성"
         : "새 더미 생성 (캐시 저장 실패)",
     );
+  };
+
+  const handleClearUsage = () => {
+    const confirmed = window.confirm(
+      "오늘의 생성 사용량 기록을 초기화할까요? 이 작업은 되돌릴 수 없습니다.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setUsageStats(clearUsageStats());
+    setStorageMessage("사용량 기록을 초기화했습니다.");
   };
 
   const handleSave = () => {
@@ -195,6 +227,11 @@ export function DetailWorkspace() {
     : "저장 전";
   const currentProjectName = product.projectName.trim() || FALLBACK_PROJECT_NAME;
   const currentClientName = product.clientName.trim() || FALLBACK_CLIENT_NAME;
+  const formattedLastGeneratedAt = usageStats.lastGeneratedAt
+    ? new Intl.DateTimeFormat("ko-KR", {
+        timeStyle: "short",
+      }).format(new Date(usageStats.lastGeneratedAt))
+    : "없음";
 
   return (
     <main className="min-h-screen bg-zinc-100 text-zinc-950">
@@ -259,7 +296,50 @@ export function DetailWorkspace() {
       </header>
 
       <div className="mx-auto grid max-w-7xl gap-5 px-5 py-5 lg:grid-cols-[420px_minmax(0,1fr)]">
-        <aside className="min-w-0">
+        <aside className="grid min-w-0 content-start gap-5">
+          <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold">사용량</h2>
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  더미 생성 흐름과 캐시 재사용을 오늘 기준으로 추적합니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="shrink-0 rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100"
+                onClick={handleClearUsage}
+              >
+                초기화
+              </button>
+            </div>
+            <dl className="grid grid-cols-2 gap-3">
+              <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                <dt className="text-xs text-zinc-500">오늘 생성 횟수</dt>
+                <dd className="mt-1 text-lg font-semibold text-zinc-950">
+                  {usageStats.totalGenerations}
+                </dd>
+              </div>
+              <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                <dt className="text-xs text-zinc-500">캐시 재사용 횟수</dt>
+                <dd className="mt-1 text-lg font-semibold text-zinc-950">
+                  {usageStats.cacheHits}
+                </dd>
+              </div>
+              <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                <dt className="text-xs text-zinc-500">절약된 예상 요청 수</dt>
+                <dd className="mt-1 text-lg font-semibold text-zinc-950">
+                  {usageStats.estimatedSavedRequests}
+                </dd>
+              </div>
+              <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                <dt className="text-xs text-zinc-500">마지막 생성 시간</dt>
+                <dd className="mt-1 text-sm font-semibold text-zinc-950">
+                  {formattedLastGeneratedAt}
+                </dd>
+              </div>
+            </dl>
+          </section>
           <ProductInputForm value={product} onChange={handleProductChange} />
         </aside>
 
