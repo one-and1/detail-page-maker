@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DetailPreview } from "@/src/components/detail-preview";
 import { ProductInputForm } from "@/src/components/product-input-form";
 import { SectionListPanel } from "@/src/components/section-list-panel";
+import {
+  clearSectionCopyCache,
+  createSectionCacheKey,
+  getCachedSectionCopy,
+  saveCachedSectionCopy,
+} from "@/src/lib/cache";
 import { generateDummySectionCopy } from "@/src/lib/dummy-generator";
 import { makeSections } from "@/src/lib/make-sections";
 import {
@@ -39,6 +45,7 @@ export function DetailWorkspace() {
   const [storageMessage, setStorageMessage] = useState(
     "저장된 작업을 확인하는 중입니다.",
   );
+  const dummyGenerationIndexRef = useRef(0);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -76,14 +83,57 @@ export function DetailWorkspace() {
   };
 
   const handleSectionRegenerate = (sectionId: DetailSection["id"]) => {
+    const targetSection = sections.find((section) => section.id === sectionId);
+
+    if (!targetSection) {
+      return;
+    }
+
+    const cacheKey = createSectionCacheKey({
+      product,
+      sectionKind: targetSection.kind,
+      tone: product.tone,
+      generationType: "dummy",
+    });
+    const cachedCopy = getCachedSectionCopy(cacheKey);
+
+    if (cachedCopy) {
+      setSections((currentSections) =>
+        currentSections.map((section) =>
+          section.id === sectionId
+            ? { ...section, copy: cachedCopy.content }
+            : section,
+        ),
+      );
+      setStorageMessage("캐시 재사용");
+      return;
+    }
+
+    const generatedAt = new Date().toISOString();
+    dummyGenerationIndexRef.current += 1;
+    const generationSeed = `${generatedAt}:${window.performance.now()}`;
+    const generatedCopy = generateDummySectionCopy(product, targetSection, {
+      generationIndex: dummyGenerationIndexRef.current,
+      generationSeed,
+    });
+    const saved = saveCachedSectionCopy({
+      key: cacheKey,
+      sectionKind: targetSection.kind,
+      content: generatedCopy,
+      createdAt: generatedAt,
+      source: "dummy",
+    });
+
     setSections((currentSections) =>
       currentSections.map((section) =>
-        section.id === sectionId
-          ? { ...section, copy: generateDummySectionCopy(product, section) }
-          : section,
+        section.id === sectionId ? { ...section, copy: generatedCopy } : section,
       ),
     );
-    setStorageMessage("저장되지 않은 섹션 더미 카피가 생성되었습니다.");
+    setStorageMessage(
+      saved
+        ? "새 더미 생성"
+        : "새 더미 생성 (캐시 저장 실패)",
+    );
   };
 
   const handleSave = () => {
@@ -125,6 +175,16 @@ export function DetailWorkspace() {
     setSections(makeSections(initialProduct));
     setLastSavedAt(null);
     setStorageMessage("작업을 초기화했습니다.");
+  };
+
+  const handleClearCache = () => {
+    const cleared = clearSectionCopyCache();
+
+    setStorageMessage(
+      cleared
+        ? "더미 섹션 생성 캐시를 초기화했습니다."
+        : "브라우저 캐시 저장소를 사용할 수 없습니다.",
+    );
   };
 
   const formattedLastSavedAt = lastSavedAt
@@ -181,6 +241,13 @@ export function DetailWorkspace() {
                 onClick={handleReset}
               >
                 초기화
+              </button>
+              <button
+                type="button"
+                className="rounded-md border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100"
+                onClick={handleClearCache}
+              >
+                캐시 초기화
               </button>
             </div>
             <div className="leading-5">
