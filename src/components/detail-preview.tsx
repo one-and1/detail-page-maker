@@ -7,7 +7,7 @@ type Props = {
   product: ProductInfo;
   sections: DetailSection[];
   onSectionCopyChange: (sectionId: DetailSection["id"], copy: string) => void;
-  onSectionRegenerate: (sectionId: DetailSection["id"]) => void;
+  onSectionRegenerate: (sectionId: DetailSection["id"]) => void | Promise<void>;
 };
 
 const toneLabel: Record<ProductInfo["tone"], string> = {

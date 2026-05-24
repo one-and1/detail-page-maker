@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { DetailPreview } from "@/src/components/detail-preview";
 import { ProductInputForm } from "@/src/components/product-input-form";
 import { SectionListPanel } from "@/src/components/section-list-panel";
@@ -10,7 +10,6 @@ import {
   getCachedSectionCopy,
   saveCachedSectionCopy,
 } from "@/src/lib/cache";
-import { generateDummySectionCopy } from "@/src/lib/dummy-generator";
 import { makeSections } from "@/src/lib/make-sections";
 import {
   clearProjectDraft,
@@ -24,10 +23,16 @@ import {
   recordCacheMiss,
   type UsageStats,
 } from "@/src/lib/usage-tracker";
-import type { DetailSection, ProductInfo } from "@/src/types";
+import type {
+  DetailSection,
+  GeneratedSectionCopy,
+  GenerationMode,
+  ProductInfo,
+} from "@/src/types";
 
 const FALLBACK_PROJECT_NAME = "새 프로젝트";
 const FALLBACK_CLIENT_NAME = "클라이언트 미지정";
+const CLIENT_GENERATION_MODE: GenerationMode = "dummy";
 
 const initialUsageStats: UsageStats = {
   totalGenerations: 0,
@@ -61,7 +66,6 @@ export function DetailWorkspace() {
     "저장된 작업을 확인하는 중입니다.",
   );
   const [usageStats, setUsageStats] = useState<UsageStats>(initialUsageStats);
-  const dummyGenerationIndexRef = useRef(0);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -99,7 +103,7 @@ export function DetailWorkspace() {
     setStorageMessage("저장되지 않은 섹션 수정이 있습니다.");
   };
 
-  const handleSectionRegenerate = (sectionId: DetailSection["id"]) => {
+  const handleSectionRegenerate = async (sectionId: DetailSection["id"]) => {
     const targetSection = sections.find((section) => section.id === sectionId);
 
     if (!targetSection) {
@@ -110,7 +114,7 @@ export function DetailWorkspace() {
       product,
       sectionKind: targetSection.kind,
       tone: product.tone,
-      generationType: "dummy",
+      generationType: CLIENT_GENERATION_MODE,
     });
     const cachedCopy = getCachedSectionCopy(cacheKey);
 
@@ -123,35 +127,80 @@ export function DetailWorkspace() {
             : section,
         ),
       );
-      setStorageMessage("캐시 재사용");
+      setStorageMessage(
+        `cache hit: ${cachedCopy.source}, generatedAt ${cachedCopy.createdAt}`,
+      );
       return;
     }
 
-    const generatedAt = new Date().toISOString();
-    dummyGenerationIndexRef.current += 1;
-    const generationSeed = `${generatedAt}:${window.performance.now()}`;
-    const generatedCopy = generateDummySectionCopy(product, targetSection, {
-      generationIndex: dummyGenerationIndexRef.current,
-      generationSeed,
-    });
+    setStorageMessage("Generating section via /api/generate-section...");
+
+    let generatedSection: GeneratedSectionCopy;
+    let apiCached = false;
+
+    try {
+      const response = await fetch("/api/generate-section", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sectionKind: targetSection.kind,
+          product,
+          tone: product.tone,
+          generationMode: CLIENT_GENERATION_MODE,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Generate section request failed: ${response.status}`);
+      }
+
+      const responseBody = (await response.json()) as Partial<
+        GeneratedSectionCopy & { cached?: boolean }
+      >;
+
+      if (
+        typeof responseBody.content !== "string" ||
+        responseBody.sectionKind !== targetSection.kind ||
+        (responseBody.source !== "dummy" && responseBody.source !== "openai") ||
+        typeof responseBody.generatedAt !== "string"
+      ) {
+        throw new Error("Generate section response is invalid.");
+      }
+
+      generatedSection = {
+        content: responseBody.content,
+        sectionKind: responseBody.sectionKind,
+        source: responseBody.source,
+        generatedAt: responseBody.generatedAt,
+      };
+      apiCached = responseBody.cached === true;
+    } catch {
+      setStorageMessage("Section generation failed. No cache entry was written.");
+      return;
+    }
+
     const saved = saveCachedSectionCopy({
       key: cacheKey,
-      sectionKind: targetSection.kind,
-      content: generatedCopy,
-      createdAt: generatedAt,
-      source: "dummy",
+      sectionKind: generatedSection.sectionKind,
+      content: generatedSection.content,
+      createdAt: generatedSection.generatedAt,
+      source: generatedSection.source,
     });
 
     setSections((currentSections) =>
       currentSections.map((section) =>
-        section.id === sectionId ? { ...section, copy: generatedCopy } : section,
+        section.id === sectionId
+          ? { ...section, copy: generatedSection.content }
+          : section,
       ),
     );
-    setUsageStats(recordCacheMiss(generatedAt));
+    setUsageStats(recordCacheMiss(generatedSection.generatedAt));
     setStorageMessage(
       saved
-        ? "새 더미 생성"
-        : "새 더미 생성 (캐시 저장 실패)",
+        ? `API generated: ${generatedSection.source}, cached ${apiCached}, generatedAt ${generatedSection.generatedAt}`
+        : `API generated: ${generatedSection.source}, cached ${apiCached}, generatedAt ${generatedSection.generatedAt} (cache save failed)`,
     );
   };
 

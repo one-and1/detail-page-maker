@@ -1,16 +1,16 @@
-import type { ProductInfo, SectionKind } from "@/src/types";
+import type { GenerationMode, ProductInfo, SectionKind } from "@/src/types";
 
 const CACHE_STORAGE_KEY = "detail-page-maker:generation-cache";
 const CACHE_SCHEMA_VERSION = 1;
 
-export type GenerationType = "dummy";
+export type GenerationType = GenerationMode;
 
 export type CachedSectionCopy = {
   key: string;
   sectionKind: SectionKind;
   content: string;
   createdAt: string;
-  source: "dummy";
+  source: GenerationMode;
 };
 
 type CacheStore = {
@@ -99,7 +99,7 @@ function readCacheStore(): CacheStore {
             typeof entry.sectionKind === "string" &&
             typeof entry.content === "string" &&
             typeof entry.createdAt === "string" &&
-            entry.source === "dummy",
+            (entry.source === "dummy" || entry.source === "openai"),
         ),
       ),
     };
