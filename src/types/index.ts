@@ -2,7 +2,7 @@ export type Tone = "clear" | "friendly" | "premium" | "minimal";
 
 export type SectionKind = "hero" | "usp" | "spec" | "comparison" | "faq" | "cta";
 
-export type GenerationMode = "dummy" | "live" | "disabled";
+export type GenerationMode = "dummy" | "openai";
 
 export interface ProductInfo {
   projectName: string;
@@ -37,12 +37,12 @@ export interface GenerateSectionInput {
   sectionKind: SectionKind;
   product: ProductInfo;
   tone: Tone;
-  generationMode: GenerationMode;
+  generationMode?: GenerationMode;
 }
 
 export interface GeneratedSectionCopy {
   content: string;
   sectionKind: SectionKind;
-  source: "dummy";
+  source: GenerationMode;
   generatedAt: string;
 }

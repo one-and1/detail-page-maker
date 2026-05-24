@@ -4,7 +4,7 @@ const DEFAULT_AI_PROVIDER = "openai";
 const DEFAULT_AI_GENERATION_MODE = "dummy";
 
 const AI_PROVIDERS = [DEFAULT_AI_PROVIDER] as const;
-const AI_GENERATION_MODES = ["dummy", "live", "disabled"] as const;
+const AI_GENERATION_MODES = [DEFAULT_AI_GENERATION_MODE, "openai"] as const;
 
 export type AiProvider = (typeof AI_PROVIDERS)[number];
 export type AiGenerationMode = (typeof AI_GENERATION_MODES)[number];
@@ -15,7 +15,7 @@ export type ServerAiEnv = {
   openaiApiKey: string | null;
   openaiModel: string | null;
   isOpenAiConfigured: boolean;
-  isLiveGenerationEnabled: boolean;
+  isOpenAiGenerationEnabled: boolean;
 };
 
 function readOptionalEnv(name: string) {
@@ -57,6 +57,6 @@ export function getServerAiEnv(): ServerAiEnv {
     openaiApiKey,
     openaiModel,
     isOpenAiConfigured,
-    isLiveGenerationEnabled: generationMode === "live" && isOpenAiConfigured,
+    isOpenAiGenerationEnabled: generationMode === "openai" && isOpenAiConfigured,
   };
 }

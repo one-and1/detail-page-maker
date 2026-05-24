@@ -9,7 +9,7 @@ import type {
 
 const SECTION_KINDS = ["hero", "usp", "spec", "comparison", "faq", "cta"] as const;
 const TONES = ["clear", "friendly", "premium", "minimal"] as const;
-const GENERATION_MODES = ["dummy", "live", "disabled"] as const;
+const GENERATION_MODES = ["dummy", "openai"] as const;
 
 type ValidationResult =
   | { ok: true; data: GenerateSectionInput }
@@ -97,7 +97,10 @@ function validateGenerateSectionRequest(body: unknown): ValidationResult {
     return { ok: false, message: "tone is invalid." };
   }
 
-  if (!isGenerationMode(body.generationMode)) {
+  if (
+    typeof body.generationMode !== "undefined" &&
+    !isGenerationMode(body.generationMode)
+  ) {
     return { ok: false, message: "generationMode is invalid." };
   }
 
