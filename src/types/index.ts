@@ -2,6 +2,8 @@ export type Tone = "clear" | "friendly" | "premium" | "minimal";
 
 export type SectionKind = "hero" | "usp" | "spec" | "comparison" | "faq" | "cta";
 
+export type GenerationMode = "dummy" | "live" | "disabled";
+
 export interface ProductInfo {
   projectName: string;
   clientName: string;
@@ -29,4 +31,18 @@ export interface PersistedProject {
   sections: DetailSection[];
   updatedAt: string;
   schemaVersion: number;
+}
+
+export interface GenerateSectionInput {
+  sectionKind: SectionKind;
+  product: ProductInfo;
+  tone: Tone;
+  generationMode: GenerationMode;
+}
+
+export interface GeneratedSectionCopy {
+  content: string;
+  sectionKind: SectionKind;
+  source: "dummy";
+  generatedAt: string;
 }

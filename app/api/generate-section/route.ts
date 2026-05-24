@@ -1,1 +1,1 @@
-export { POST } from "@/src/lib/generate-section-route";
+export { POST } from "@/src/app/api/generate-section/route";
