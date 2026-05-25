@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DetailPreview } from "@/src/components/detail-preview";
 import { ProductInputForm } from "@/src/components/product-input-form";
 import { SectionListPanel } from "@/src/components/section-list-panel";
 import {
   clearSectionCopyCache,
   createSectionCacheKey,
+  debugSectionCache,
   getCachedSectionCopy,
   saveCachedSectionCopy,
 } from "@/src/lib/cache";
@@ -32,7 +33,7 @@ import type {
 
 const FALLBACK_PROJECT_NAME = "새 프로젝트";
 const FALLBACK_CLIENT_NAME = "클라이언트 미지정";
-const CLIENT_GENERATION_MODE: GenerationMode = "dummy";
+const DEFAULT_CLIENT_GENERATION_MODE: GenerationMode = "dummy";
 
 const initialUsageStats: UsageStats = {
   totalGenerations: 0,
@@ -57,11 +58,16 @@ const initialProduct: ProductInfo = {
 };
 
 export function DetailWorkspace() {
+  const pendingGenerationKeysRef = useRef<Set<string>>(new Set());
   const [product, setProduct] = useState<ProductInfo>(initialProduct);
   const [sections, setSections] = useState<DetailSection[]>(() =>
     makeSections(initialProduct),
   );
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [generationMode, setGenerationMode] = useState<GenerationMode>(
+    DEFAULT_CLIENT_GENERATION_MODE,
+  );
+  const [isGenerationModeReady, setIsGenerationModeReady] = useState(false);
   const [storageMessage, setStorageMessage] = useState(
     "저장된 작업을 확인하는 중입니다.",
   );
@@ -83,6 +89,43 @@ export function DetailWorkspace() {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadGenerationMode = async () => {
+      try {
+        const response = await fetch("/api/ai-config");
+
+        if (!response.ok) {
+          return;
+        }
+
+        const config = (await response.json()) as Partial<{
+          generationMode: GenerationMode;
+        }>;
+
+        if (
+          isActive &&
+          (config.generationMode === "dummy" || config.generationMode === "openai")
+        ) {
+          setGenerationMode(config.generationMode);
+        }
+      } catch {
+        // Keep the local dummy default if the runtime config route is unavailable.
+      } finally {
+        if (isActive) {
+          setIsGenerationModeReady(true);
+        }
+      }
+    };
+
+    void loadGenerationMode();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const handleProductChange = (nextProduct: ProductInfo) => {
@@ -110,16 +153,28 @@ export function DetailWorkspace() {
       return;
     }
 
+    if (!isGenerationModeReady) {
+      setStorageMessage("Generation mode is still loading. Please try again shortly.");
+      return;
+    }
+
     const cacheKey = createSectionCacheKey({
       product,
       sectionKind: targetSection.kind,
       tone: product.tone,
-      generationType: CLIENT_GENERATION_MODE,
+      generationType: generationMode,
     });
     const cachedCopy = getCachedSectionCopy(cacheKey);
 
+    debugSectionCache({
+      cacheKey,
+      sectionKind: targetSection.kind,
+      generationType: generationMode,
+      hit: !!cachedCopy,
+    });
+
     if (cachedCopy) {
-      setUsageStats(recordCacheHit());
+      setUsageStats(recordCacheHit(cachedCopy.createdAt));
       setSections((currentSections) =>
         currentSections.map((section) =>
           section.id === sectionId
@@ -128,11 +183,17 @@ export function DetailWorkspace() {
         ),
       );
       setStorageMessage(
-        `cache hit: ${cachedCopy.source}, generatedAt ${cachedCopy.createdAt}`,
+        `캐시 재사용: ${cachedCopy.source}, generatedAt ${cachedCopy.createdAt}`,
       );
       return;
     }
 
+    if (pendingGenerationKeysRef.current.has(cacheKey)) {
+      setStorageMessage("같은 입력의 섹션 생성 요청이 이미 진행 중입니다.");
+      return;
+    }
+
+    pendingGenerationKeysRef.current.add(cacheKey);
     setStorageMessage("Generating section via /api/generate-section...");
 
     let generatedSection: GeneratedSectionCopy;
@@ -148,7 +209,7 @@ export function DetailWorkspace() {
           sectionKind: targetSection.kind,
           product,
           tone: product.tone,
-          generationMode: CLIENT_GENERATION_MODE,
+          generationMode,
         }),
       });
 
@@ -179,7 +240,16 @@ export function DetailWorkspace() {
     } catch {
       setStorageMessage("Section generation failed. No cache entry was written.");
       return;
+    } finally {
+      pendingGenerationKeysRef.current.delete(cacheKey);
     }
+
+    debugSectionCache({
+      cacheKey,
+      sectionKind: generatedSection.sectionKind,
+      generationType: generationMode,
+      hit: false,
+    });
 
     const saved = saveCachedSectionCopy({
       key: cacheKey,

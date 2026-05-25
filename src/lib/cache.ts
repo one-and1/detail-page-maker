@@ -2,6 +2,7 @@ import type { GenerationMode, ProductInfo, SectionKind } from "@/src/types";
 
 const CACHE_STORAGE_KEY = "detail-page-maker:generation-cache";
 const CACHE_SCHEMA_VERSION = 1;
+const SECTION_COPY_CACHE_KEY_VERSION = "section-copy@v2";
 
 export type GenerationType = GenerationMode;
 
@@ -31,6 +32,17 @@ function canUseLocalStorage() {
 
 function normalizeText(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function createNormalizedProductCacheInput(product: ProductInfo) {
+  return {
+    brandName: normalizeText(product.brandName),
+    category: normalizeText(product.category),
+    productName: normalizeText(product.productName),
+    specs: normalizeText(product.specs),
+    targetAudience: normalizeText(product.targetAudience),
+    usp: normalizeText(product.usp),
+  };
 }
 
 function stableStringify(value: unknown): string {
@@ -128,30 +140,43 @@ export function createSectionCacheKey({
   generationType,
 }: SectionCacheKeyInput) {
   const normalizedInput = {
+    keyVersion: SECTION_COPY_CACHE_KEY_VERSION,
     generationType,
-    product: {
-      brandName: normalizeText(product.brandName),
-      category: normalizeText(product.category),
-      clientName: normalizeText(product.clientName),
-      forbiddenPhrases: normalizeText(product.forbiddenPhrases),
-      notes: normalizeText(product.notes),
-      productName: normalizeText(product.productName),
-      projectName: normalizeText(product.projectName),
-      specs: normalizeText(product.specs),
-      targetAudience: normalizeText(product.targetAudience),
-      usp: normalizeText(product.usp),
-    },
+    product: createNormalizedProductCacheInput(product),
     sectionKind,
     tone,
   };
 
-  return `section-copy:${generationType}:${sectionKind}:${tone}:${hashString(
-    stableStringify(normalizedInput),
-  )}`;
+  const inputHash = hashString(stableStringify(normalizedInput));
+
+  return `${SECTION_COPY_CACHE_KEY_VERSION}:${generationType}:${sectionKind}:${tone}:${inputHash}`;
 }
 
 export function getCachedSectionCopy(key: string): CachedSectionCopy | null {
   return readCacheStore().entries[key] ?? null;
+}
+
+export function debugSectionCache({
+  cacheKey,
+  sectionKind,
+  generationType,
+  hit,
+}: {
+  cacheKey: string;
+  sectionKind: SectionKind;
+  generationType: GenerationType;
+  hit: boolean;
+}) {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  console.debug("[cache-debug]", {
+    cacheKey,
+    sectionKind,
+    generationType,
+    hit,
+  });
 }
 
 export function saveCachedSectionCopy(entry: CachedSectionCopy) {
