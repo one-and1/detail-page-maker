@@ -1,6 +1,8 @@
 import OpenAI from "openai";
 import { generateDummySectionCopy } from "@/src/lib/dummy-generator";
 import { getServerAiEnv } from "@/src/lib/env";
+import { buildHeroPrompt } from "@/src/prompts/hero";
+import { buildUspPrompt } from "@/src/prompts/usp";
 import type {
   DetailSection,
   GeneratedSectionCopy,
@@ -11,6 +13,8 @@ import type {
 
 const OPENAI_TIMEOUT_MS = 12_000;
 const OPENAI_MAX_COMPLETION_TOKENS = 280;
+
+type LegacyPromptSectionKind = Exclude<SectionKind, "hero" | "usp">;
 
 function createSectionShell(sectionKind: SectionKind): DetailSection {
   return {
@@ -80,12 +84,8 @@ function createFallbackOpenAiResponse({
   };
 }
 
-function getSectionInstruction(sectionKind: SectionKind) {
+function getSectionInstruction(sectionKind: LegacyPromptSectionKind) {
   switch (sectionKind) {
-    case "hero":
-      return "Create a concise hero section: one strong headline and one short supporting sentence.";
-    case "usp":
-      return "Create a USP section: 3 short benefit bullets focused on concrete product strengths.";
     case "faq":
       return "Create an FAQ section: 3 brief Q&A pairs that address practical buyer concerns.";
     case "cta":
@@ -97,16 +97,13 @@ function getSectionInstruction(sectionKind: SectionKind) {
   }
 }
 
-function buildOpenAiPrompt({ product, sectionKind, tone }: GenerateSectionInput) {
+function buildLegacySectionPrompt({
+  product,
+  sectionKind,
+  tone,
+}: GenerateSectionInput & { sectionKind: LegacyPromptSectionKind }) {
   return [
     getSectionInstruction(sectionKind),
-    "",
-    "Rules:",
-    "- Write in Korean.",
-    "- Generate only this single section. Do not create a full detail page.",
-    "- Keep the output plain text, short, and ready to paste into the existing section copy field.",
-    "- Do not invent certifications, rankings, prices, discounts, or guaranteed effects.",
-    "- Avoid forbidden phrases exactly as provided.",
     "",
     "Product context:",
     `- Brand: ${product.brandName}`,
@@ -118,6 +115,36 @@ function buildOpenAiPrompt({ product, sectionKind, tone }: GenerateSectionInput)
     `- Specs: ${product.specs}`,
     `- Forbidden phrases: ${product.forbiddenPhrases}`,
     `- Notes: ${product.notes}`,
+  ].join("\n");
+}
+
+function getSectionPrompt(input: GenerateSectionInput): string {
+  switch (input.sectionKind) {
+    case "hero":
+      return buildHeroPrompt(input.product, input.tone);
+    case "usp":
+      return buildUspPrompt(input.product, input.tone);
+    case "faq":
+    case "cta":
+    case "spec":
+    case "comparison":
+      return buildLegacySectionPrompt({
+        ...input,
+        sectionKind: input.sectionKind,
+      });
+  }
+}
+
+function buildOpenAiPrompt({ product, sectionKind, tone }: GenerateSectionInput) {
+  return [
+    "Rules:",
+    "- Write in Korean.",
+    "- Generate only this single section. Do not create a full detail page.",
+    "- Keep the output plain text, short, and ready to paste into the existing section copy field.",
+    "- Do not invent certifications, rankings, prices, discounts, or guaranteed effects.",
+    "- Avoid forbidden phrases exactly as provided.",
+    "",
+    getSectionPrompt({ product, sectionKind, tone }),
   ].join("\n");
 }
 
