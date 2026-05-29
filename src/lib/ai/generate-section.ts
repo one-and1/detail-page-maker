@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { generateDummySectionCopy } from "@/src/lib/dummy-generator";
 import { getServerAiEnv } from "@/src/lib/env";
+import { buildCtaPrompt } from "@/src/prompts/cta";
 import { buildHeroPrompt } from "@/src/prompts/hero";
 import { buildUspPrompt } from "@/src/prompts/usp";
 import type {
@@ -14,7 +15,7 @@ import type {
 const OPENAI_TIMEOUT_MS = 12_000;
 const OPENAI_MAX_COMPLETION_TOKENS = 280;
 
-type LegacyPromptSectionKind = Exclude<SectionKind, "hero" | "usp">;
+type LegacyPromptSectionKind = Exclude<SectionKind, "hero" | "usp" | "cta">;
 
 function createSectionShell(sectionKind: SectionKind): DetailSection {
   return {
@@ -88,8 +89,6 @@ function getSectionInstruction(sectionKind: LegacyPromptSectionKind) {
   switch (sectionKind) {
     case "faq":
       return "Create an FAQ section: 3 brief Q&A pairs that address practical buyer concerns.";
-    case "cta":
-      return "Create a CTA section: one short closing line and one direct action phrase.";
     case "spec":
       return "Create a specs section: summarize only the provided product specs in readable lines.";
     case "comparison":
@@ -124,8 +123,9 @@ function getSectionPrompt(input: GenerateSectionInput): string {
       return buildHeroPrompt(input.product, input.tone);
     case "usp":
       return buildUspPrompt(input.product, input.tone);
-    case "faq":
     case "cta":
+      return buildCtaPrompt(input.product, input.tone);
+    case "faq":
     case "spec":
     case "comparison":
       return buildLegacySectionPrompt({
