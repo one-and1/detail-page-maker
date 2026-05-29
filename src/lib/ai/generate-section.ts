@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { generateDummySectionCopy } from "@/src/lib/dummy-generator";
 import { getServerAiEnv } from "@/src/lib/env";
 import { buildCtaPrompt } from "@/src/prompts/cta";
+import { buildFaqPrompt } from "@/src/prompts/faq";
 import { buildHeroPrompt } from "@/src/prompts/hero";
 import { buildUspPrompt } from "@/src/prompts/usp";
 import type {
@@ -15,7 +16,7 @@ import type {
 const OPENAI_TIMEOUT_MS = 12_000;
 const OPENAI_MAX_COMPLETION_TOKENS = 280;
 
-type LegacyPromptSectionKind = Exclude<SectionKind, "hero" | "usp" | "cta">;
+type LegacyPromptSectionKind = Exclude<SectionKind, "hero" | "usp" | "cta" | "faq">;
 
 function createSectionShell(sectionKind: SectionKind): DetailSection {
   return {
@@ -87,8 +88,6 @@ function createFallbackOpenAiResponse({
 
 function getSectionInstruction(sectionKind: LegacyPromptSectionKind) {
   switch (sectionKind) {
-    case "faq":
-      return "Create an FAQ section: 3 brief Q&A pairs that address practical buyer concerns.";
     case "spec":
       return "Create a specs section: summarize only the provided product specs in readable lines.";
     case "comparison":
@@ -126,6 +125,7 @@ function getSectionPrompt(input: GenerateSectionInput): string {
     case "cta":
       return buildCtaPrompt(input.product, input.tone);
     case "faq":
+      return buildFaqPrompt(input.product, input.tone);
     case "spec":
     case "comparison":
       return buildLegacySectionPrompt({
