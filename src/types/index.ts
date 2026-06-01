@@ -1,4 +1,11 @@
-export type Tone = "clear" | "friendly" | "premium" | "minimal";
+export const SUPPORTED_TONES = [
+  "premium",
+  "emotional",
+  "clean",
+  "professional",
+] as const;
+
+export type Tone = (typeof SUPPORTED_TONES)[number];
 
 export type SectionKind = "hero" | "usp" | "spec" | "comparison" | "faq" | "cta";
 

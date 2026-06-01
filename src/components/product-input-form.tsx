@@ -1,6 +1,8 @@
 "use client";
 
 import type { ProductInfo } from "@/src/types";
+import { SUPPORTED_TONES } from "@/src/types";
+import { TONE_DESCRIPTIONS, TONE_LABELS } from "@/src/lib/tone-system";
 
 type Props = {
   value: ProductInfo;
@@ -87,10 +89,11 @@ export function ProductInputForm({ value, onChange }: Props) {
               patch({ tone: event.target.value as ProductInfo["tone"] })
             }
           >
-            <option value="clear">명확하고 실용적</option>
-            <option value="friendly">친근한 설명형</option>
-            <option value="premium">프리미엄</option>
-            <option value="minimal">미니멀</option>
+            {SUPPORTED_TONES.map((tone) => (
+              <option key={tone} value={tone}>
+                {TONE_LABELS[tone]} - {TONE_DESCRIPTIONS[tone]}
+              </option>
+            ))}
           </select>
         </Field>
 

@@ -1,4 +1,5 @@
 import type { PersistedProject, ProductInfo } from "@/src/types";
+import { normalizeTone } from "@/src/lib/tone-system";
 
 const STORAGE_KEY = "detail-page-maker:project-draft";
 
@@ -33,12 +34,7 @@ function normalizeProductInfo(product: Partial<ProductInfo>): ProductInfo {
     category: typeof product.category === "string" ? product.category : "",
     targetAudience:
       typeof product.targetAudience === "string" ? product.targetAudience : "",
-    tone:
-      product.tone === "friendly" ||
-      product.tone === "premium" ||
-      product.tone === "minimal"
-        ? product.tone
-        : "clear",
+    tone: normalizeTone(product.tone),
     usp: typeof product.usp === "string" ? product.usp : "",
     specs: typeof product.specs === "string" ? product.specs : "",
     forbiddenPhrases:

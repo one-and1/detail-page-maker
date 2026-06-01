@@ -1,4 +1,5 @@
 import type { ProductInfo, Tone } from "@/src/types";
+import { getToneInstruction } from "@/src/lib/tone-system";
 
 const CUSTOMER_HONORIFIC = "\uace0\uac1d\ub2d8";
 const FORMAL_ENDING_IPNIDA = "\uc785\ub2c8\ub2e4";
@@ -9,19 +10,6 @@ const BANNED_CTA_PHRASES = [
   CUSTOMER_HONORIFIC,
   "\uc81c\uacf5\ud569\ub2c8\ub2e4",
 ].join(", ");
-
-function getToneInstruction(tone: Tone): string {
-  switch (tone) {
-    case "clear":
-      return "plain, natural, and easy to act on";
-    case "friendly":
-      return `warm and conversational, without saying ${CUSTOMER_HONORIFIC}`;
-    case "premium":
-      return "calm and polished, with restraint instead of pressure";
-    case "minimal":
-      return "very concise, memorable, and rhythmic";
-  }
-}
 
 export function buildCtaPrompt(product: ProductInfo, tone: Tone): string {
   return [
@@ -45,7 +33,7 @@ export function buildCtaPrompt(product: ProductInfo, tone: Tone): string {
     "- Avoid generic AI-like praise, exaggerated claims, and absolute promises.",
     "- Do not invent effects, certifications, rankings, prices, discounts, or guarantees.",
     `- Do not use or closely imitate these phrases: ${BANNED_CTA_PHRASES}.`,
-    `- Match the tone: ${getToneInstruction(tone)}.`,
+    `- Match the selected tone strongly: ${getToneInstruction(tone, "cta")}.`,
     "",
     "Product context:",
     `- Brand: ${product.brandName}`,

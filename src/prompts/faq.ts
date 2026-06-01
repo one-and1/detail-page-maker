@@ -1,4 +1,5 @@
 import type { ProductInfo, Tone } from "@/src/types";
+import { getToneInstruction } from "@/src/lib/tone-system";
 
 const CUSTOMER_HONORIFIC = "\uace0\uac1d\ub2d8";
 const FORMAL_ENDING_IPNIDA = "\uc785\ub2c8\ub2e4";
@@ -9,19 +10,6 @@ const BANNED_FAQ_PHRASES = [
   CUSTOMER_HONORIFIC,
   "\uc81c\uacf5\ud569\ub2c8\ub2e4",
 ].join(", ");
-
-function getToneInstruction(tone: Tone): string {
-  switch (tone) {
-    case "clear":
-      return "plain, specific, and easy to trust";
-    case "friendly":
-      return `warm and conversational, without saying ${CUSTOMER_HONORIFIC}`;
-    case "premium":
-      return "calm, polished, and measured";
-    case "minimal":
-      return "concise, practical, and low on decoration";
-  }
-}
 
 export function buildFaqPrompt(product: ProductInfo, tone: Tone): string {
   return [
@@ -45,7 +33,7 @@ export function buildFaqPrompt(product: ProductInfo, tone: Tone): string {
     "- Do not invent effects, certifications, rankings, prices, discounts, delivery guarantees, warranty terms, or policies not provided.",
     "- If shipping, warranty, or exact policy details are not provided, answer cautiously without making up specifics.",
     `- Do not use these phrases: ${BANNED_FAQ_PHRASES}.`,
-    `- Match the tone: ${getToneInstruction(tone)}.`,
+    `- Match the selected tone strongly: ${getToneInstruction(tone, "faq")}.`,
     "",
     "Product context:",
     `- Brand: ${product.brandName}`,

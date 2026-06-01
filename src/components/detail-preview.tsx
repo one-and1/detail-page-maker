@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { TONE_LABELS } from "@/src/lib/tone-system";
 import type { DetailSection, ProductInfo } from "@/src/types";
 
 type Props = {
@@ -8,13 +9,6 @@ type Props = {
   sections: DetailSection[];
   onSectionCopyChange: (sectionId: DetailSection["id"], copy: string) => void;
   onSectionRegenerate: (sectionId: DetailSection["id"]) => void | Promise<void>;
-};
-
-const toneLabel: Record<ProductInfo["tone"], string> = {
-  clear: "명확하고 실용적",
-  friendly: "친근한 설명형",
-  premium: "프리미엄",
-  minimal: "미니멀",
 };
 
 const FALLBACK_PROJECT_NAME = "새 프로젝트";
@@ -122,7 +116,7 @@ export function DetailPreview({
               {product.brandName} {product.productName}
             </h2>
             <p className="mt-1 text-xs text-zinc-500">
-              {projectName} · {toneLabel[product.tone]}
+              {projectName} · {TONE_LABELS[product.tone]}
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">

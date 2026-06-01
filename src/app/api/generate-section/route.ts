@@ -1,4 +1,5 @@
 import { generateSection } from "@/src/lib/ai/generate-section";
+import { isSupportedTone } from "@/src/lib/tone-system";
 import type {
   GenerationMode,
   GenerateSectionInput,
@@ -8,7 +9,6 @@ import type {
 } from "@/src/types";
 
 const SECTION_KINDS = ["hero", "usp", "spec", "comparison", "faq", "cta"] as const;
-const TONES = ["clear", "friendly", "premium", "minimal"] as const;
 const GENERATION_MODES = ["dummy", "openai"] as const;
 
 type ValidationResult =
@@ -28,7 +28,7 @@ function isSectionKind(value: unknown): value is SectionKind {
 }
 
 function isTone(value: unknown): value is Tone {
-  return isString(value) && TONES.includes(value as Tone);
+  return isSupportedTone(value);
 }
 
 function isGenerationMode(value: unknown): value is GenerationMode {

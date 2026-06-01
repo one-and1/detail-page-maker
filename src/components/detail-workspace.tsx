@@ -50,7 +50,7 @@ const initialProduct: ProductInfo = {
   productName: "웜핏 발열 패딩 베스트",
   category: "겨울 의류 / 생활 방한용품",
   targetAudience: "출퇴근과 야외 활동이 잦고 가볍지만 따뜻한 방한 아이템을 찾는 30~50대 고객",
-  tone: "clear",
+  tone: "clean",
   usp: "가벼운 착용감, 분리형 발열 패드, 생활 방수 원단, 쉬운 세탁 관리",
   specs: "겉감: 폴리에스터 100%\n충전재: 경량 패딩\n사이즈: S, M, L, XL\n색상: 블랙, 차콜",
   forbiddenPhrases: "최고, 1위, 완치, 무조건, 과장된 효능 표현",

@@ -1,4 +1,5 @@
 import type { ProductInfo, Tone } from "@/src/types";
+import { getToneInstruction } from "@/src/lib/tone-system";
 
 const CUSTOMER_HONORIFIC = "\uace0\uac1d\ub2d8";
 const FORMAL_ENDING_IPNIDA = "\uc785\ub2c8\ub2e4";
@@ -10,19 +11,6 @@ const BANNED_COPY_PHRASES = [
   CUSTOMER_HONORIFIC,
   "\uc81c\uacf5\ud569\ub2c8\ub2e4",
 ].join(", ");
-
-function getToneInstruction(tone: Tone): string {
-  switch (tone) {
-    case "clear":
-      return "plain, specific, and easy to scan";
-    case "friendly":
-      return `warm and conversational, without saying ${CUSTOMER_HONORIFIC}`;
-    case "premium":
-      return "calm and polished, without premium or luxury cliches";
-    case "minimal":
-      return "very concise, restrained, and rhythmic";
-  }
-}
 
 export function buildUspPrompt(product: ProductInfo, tone: Tone): string {
   return [
@@ -45,7 +33,7 @@ export function buildUspPrompt(product: ProductInfo, tone: Tone): string {
     "- Do not invent effects, certifications, rankings, prices, discounts, or guarantees.",
     "- Keep the section compact because it sits between other detail-page sections.",
     `- Do not use these phrases: ${BANNED_COPY_PHRASES}.`,
-    `- Match the tone: ${getToneInstruction(tone)}.`,
+    `- Match the selected tone strongly: ${getToneInstruction(tone, "usp")}.`,
     "",
     "Product context:",
     `- Brand: ${product.brandName}`,
