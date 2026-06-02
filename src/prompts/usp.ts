@@ -1,5 +1,5 @@
 import type { ProductInfo, Tone } from "@/src/types";
-import { getToneInstruction } from "@/src/lib/tone-system";
+import { getTonePromptRule } from "@/src/prompts/tone-rules";
 
 const CUSTOMER_HONORIFIC = "\uace0\uac1d\ub2d8";
 const FORMAL_ENDING_IPNIDA = "\uc785\ub2c8\ub2e4";
@@ -21,9 +21,8 @@ export function buildUspPrompt(product: ProductInfo, tone: Tone): string {
     "",
     "USP copy strategy:",
     "- Write like detail-page copy, not a feature list.",
-    "- Start from a real use moment, routine, inconvenience, or buyer concern.",
-    "- Turn product strengths into changes the buyer can feel in daily use.",
-    "- Prefer rhythmic short copy over explanatory prose.",
+    "- Turn product strengths into buyer-facing value, but let the selected tone decide whether that value is emotional, minimal, refined, or criteria-based.",
+    "- Make the 3 bullets differ in rhythm and sentence structure according to the selected tone.",
     "- Short fragments, noun phrases, and incomplete copy-style bullets are allowed.",
     `- Minimize formal endings like ~${FORMAL_ENDING_IPNIDA} and ~${FORMAL_ENDING_SEUMNIDA}.`,
     "- Make each bullet feel like ad copy, not a product explanation.",
@@ -33,7 +32,9 @@ export function buildUspPrompt(product: ProductInfo, tone: Tone): string {
     "- Do not invent effects, certifications, rankings, prices, discounts, or guarantees.",
     "- Keep the section compact because it sits between other detail-page sections.",
     `- Do not use these phrases: ${BANNED_COPY_PHRASES}.`,
-    `- Match the selected tone strongly: ${getToneInstruction(tone, "usp")}.`,
+    "",
+    "Selected tone rule:",
+    getTonePromptRule(tone, "usp"),
     "",
     "Product context:",
     `- Brand: ${product.brandName}`,

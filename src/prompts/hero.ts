@@ -1,5 +1,5 @@
 import type { ProductInfo, Tone } from "@/src/types";
-import { getToneInstruction } from "@/src/lib/tone-system";
+import { getTonePromptRule } from "@/src/prompts/tone-rules";
 
 const CUSTOMER_HONORIFIC = "\uace0\uac1d\ub2d8";
 const FORMAL_ENDING_IPNIDA = "\uc785\ub2c8\ub2e4";
@@ -20,17 +20,19 @@ export function buildHeroPrompt(product: ProductInfo, tone: Tone): string {
     "2. Supporting sentence: 35 Korean characters or fewer when possible.",
     "",
     "Hero copy strategy:",
-    "- Start from a real user situation, problem, or relatable moment.",
-    "- Include a problem-raising or empathy-based hook.",
-    "- Prefer rhythmic short copy over explanatory prose.",
+    "- Build only the first-screen hook and subcopy.",
+    "- Let the selected tone decide whether the hook starts from value, emotion, clarity, or criteria.",
+    "- Make the sentence structure visibly match the selected tone, not only the vocabulary.",
     "- Short fragments, noun phrases, and incomplete copy-style lines are allowed.",
     `- Minimize formal endings like ~${FORMAL_ENDING_IPNIDA} and ~${FORMAL_ENDING_SEUMNIDA}.`,
     "- Make it feel like an ad headline and subcopy, not a product explanation.",
-    "- Prefer concrete scenes and felt changes over feature descriptions.",
+    "- Avoid turning the hero into a feature list.",
     "- Avoid abstract brand slogans and AI-like generic claims.",
     `- Do not use these phrases: ${BANNED_COPY_PHRASES}.`,
     "- Do not over-explain. This is only the first screen.",
-    `- Match the selected tone strongly: ${getToneInstruction(tone, "hero")}.`,
+    "",
+    "Selected tone rule:",
+    getTonePromptRule(tone, "hero"),
     "",
     "Product context:",
     `- Brand: ${product.brandName}`,

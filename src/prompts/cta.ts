@@ -1,5 +1,5 @@
 import type { ProductInfo, Tone } from "@/src/types";
-import { getToneInstruction } from "@/src/lib/tone-system";
+import { getTonePromptRule } from "@/src/prompts/tone-rules";
 
 const CUSTOMER_HONORIFIC = "\uace0\uac1d\ub2d8";
 const FORMAL_ENDING_IPNIDA = "\uc785\ub2c8\ub2e4";
@@ -24,16 +24,17 @@ export function buildCtaPrompt(product: ProductInfo, tone: Tone): string {
     "- Make it feel like the natural closing section of a detail page.",
     "- Encourage the next action gently, without hard-selling.",
     "- Avoid pushy commands like buying right now.",
-    "- Let the reader picture the expected change after real use.",
-    "- Prefer concrete use moments, small benefits, and felt outcomes.",
-    "- Keep the copy short, rhythmic, and easy to remember.",
+    "- Let the selected tone decide whether the close is refined, emotional, minimal, or criteria-led.",
+    "- Make the closing line and action line use the selected tone's sentence length, rhythm, and information amount.",
     "- Advertising-copy style is allowed.",
     "- Short fragments, noun phrases, and incomplete copy-style lines are allowed.",
     `- Minimize formal endings like ~${FORMAL_ENDING_IPNIDA} and ~${FORMAL_ENDING_SEUMNIDA}.`,
     "- Avoid generic AI-like praise, exaggerated claims, and absolute promises.",
     "- Do not invent effects, certifications, rankings, prices, discounts, or guarantees.",
     `- Do not use or closely imitate these phrases: ${BANNED_CTA_PHRASES}.`,
-    `- Match the selected tone strongly: ${getToneInstruction(tone, "cta")}.`,
+    "",
+    "Selected tone rule:",
+    getTonePromptRule(tone, "cta"),
     "",
     "Product context:",
     `- Brand: ${product.brandName}`,

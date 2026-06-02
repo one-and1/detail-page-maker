@@ -1,5 +1,5 @@
 import type { ProductInfo, Tone } from "@/src/types";
-import { getToneInstruction } from "@/src/lib/tone-system";
+import { getTonePromptRule } from "@/src/prompts/tone-rules";
 
 const CUSTOMER_HONORIFIC = "\uace0\uac1d\ub2d8";
 const FORMAL_ENDING_IPNIDA = "\uc785\ub2c8\ub2e4";
@@ -33,7 +33,10 @@ export function buildFaqPrompt(product: ProductInfo, tone: Tone): string {
     "- Do not invent effects, certifications, rankings, prices, discounts, delivery guarantees, warranty terms, or policies not provided.",
     "- If shipping, warranty, or exact policy details are not provided, answer cautiously without making up specifics.",
     `- Do not use these phrases: ${BANNED_FAQ_PHRASES}.`,
-    `- Match the selected tone strongly: ${getToneInstruction(tone, "faq")}.`,
+    "- Make question wording and answer structure visibly follow the selected tone.",
+    "",
+    "Selected tone rule:",
+    getTonePromptRule(tone, "faq"),
     "",
     "Product context:",
     `- Brand: ${product.brandName}`,
