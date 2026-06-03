@@ -1,16 +1,6 @@
 import type { ProductInfo, Tone } from "@/src/types";
+import { getCommonCopyRules } from "@/src/prompts/copy-rules";
 import { getTonePromptRule } from "@/src/prompts/tone-rules";
-
-const CUSTOMER_HONORIFIC = "\uace0\uac1d\ub2d8";
-const FORMAL_ENDING_IPNIDA = "\uc785\ub2c8\ub2e4";
-const FORMAL_ENDING_SEUMNIDA = "\uc2b5\ub2c8\ub2e4";
-const BANNED_COPY_PHRASES = [
-  "\ud601\uc2e0\uc801\uc778",
-  "\ucd5c\uace0\uc758",
-  "\ud504\ub9ac\ubbf8\uc5c4\ud55c",
-  CUSTOMER_HONORIFIC,
-  "\uc81c\uacf5\ud569\ub2c8\ub2e4",
-].join(", ");
 
 export function buildUspPrompt(product: ProductInfo, tone: Tone): string {
   return [
@@ -24,17 +14,17 @@ export function buildUspPrompt(product: ProductInfo, tone: Tone): string {
     "- Turn product strengths into buyer-facing value, but let the selected tone decide whether that value is emotional, minimal, refined, or criteria-based.",
     "- Make the 3 bullets differ in rhythm and sentence structure according to the selected tone.",
     "- Short fragments, noun phrases, and incomplete copy-style bullets are allowed.",
-    `- Minimize formal endings like ~${FORMAL_ENDING_IPNIDA} and ~${FORMAL_ENDING_SEUMNIDA}.`,
     "- Make each bullet feel like ad copy, not a product explanation.",
     "- Keep sentences short, concrete, and easy to read on mobile.",
     "- Avoid abstract words, broad claims, and generic AI-like praise.",
     "- Do not merely repeat specs or list functions with commas.",
     "- Do not invent effects, certifications, rankings, prices, discounts, or guarantees.",
     "- Keep the section compact because it sits between other detail-page sections.",
-    `- Do not use these phrases: ${BANNED_COPY_PHRASES}.`,
     "",
     "Selected tone rule:",
     getTonePromptRule(tone, "usp"),
+    "",
+    getCommonCopyRules(),
     "",
     "Product context:",
     `- Brand: ${product.brandName}`,

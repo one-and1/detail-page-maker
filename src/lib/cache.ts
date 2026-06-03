@@ -2,7 +2,7 @@ import type { GenerationMode, ProductInfo, SectionKind } from "@/src/types";
 
 const CACHE_STORAGE_KEY = "detail-page-maker:generation-cache";
 const CACHE_SCHEMA_VERSION = 1;
-const SECTION_COPY_CACHE_KEY_VERSION = "section-copy@v4";
+const SECTION_COPY_CACHE_KEY_VERSION = "section-copy@v5";
 
 export type GenerationType = GenerationMode;
 

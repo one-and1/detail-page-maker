@@ -1,15 +1,6 @@
 import type { ProductInfo, Tone } from "@/src/types";
+import { getCommonCopyRules } from "@/src/prompts/copy-rules";
 import { getTonePromptRule } from "@/src/prompts/tone-rules";
-
-const CUSTOMER_HONORIFIC = "\uace0\uac1d\ub2d8";
-const FORMAL_ENDING_IPNIDA = "\uc785\ub2c8\ub2e4";
-const FORMAL_ENDING_SEUMNIDA = "\uc2b5\ub2c8\ub2e4";
-const BANNED_FAQ_PHRASES = [
-  "\ud601\uc2e0\uc801\uc778",
-  "\ucd5c\uace0\uc758",
-  CUSTOMER_HONORIFIC,
-  "\uc81c\uacf5\ud569\ub2c8\ub2e4",
-].join(", ");
 
 export function buildFaqPrompt(product: ProductInfo, tone: Tone): string {
   return [
@@ -28,15 +19,15 @@ export function buildFaqPrompt(product: ProductInfo, tone: Tone): string {
     "- Answer with grounded confidence, without exaggeration.",
     "- Prefer honest limits, conditions, and practical tips over broad claims.",
     "- Keep answers concise enough to scan on mobile.",
-    `- Minimize formal endings like ~${FORMAL_ENDING_IPNIDA} and ~${FORMAL_ENDING_SEUMNIDA}.`,
     "- Avoid generic AI-like phrasing, slogans, and sales pressure.",
     "- Do not invent effects, certifications, rankings, prices, discounts, delivery guarantees, warranty terms, or policies not provided.",
     "- If shipping, warranty, or exact policy details are not provided, answer cautiously without making up specifics.",
-    `- Do not use these phrases: ${BANNED_FAQ_PHRASES}.`,
     "- Make question wording and answer structure visibly follow the selected tone.",
     "",
     "Selected tone rule:",
     getTonePromptRule(tone, "faq"),
+    "",
+    getCommonCopyRules(),
     "",
     "Product context:",
     `- Brand: ${product.brandName}`,

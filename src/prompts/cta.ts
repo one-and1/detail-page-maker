@@ -1,15 +1,6 @@
 import type { ProductInfo, Tone } from "@/src/types";
+import { getCommonCopyRules } from "@/src/prompts/copy-rules";
 import { getTonePromptRule } from "@/src/prompts/tone-rules";
-
-const CUSTOMER_HONORIFIC = "\uace0\uac1d\ub2d8";
-const FORMAL_ENDING_IPNIDA = "\uc785\ub2c8\ub2e4";
-const FORMAL_ENDING_SEUMNIDA = "\uc2b5\ub2c8\ub2e4";
-const BANNED_CTA_PHRASES = [
-  "\uc9c0\uae08 \uad6c\ub9e4\ud558\uc138\uc694",
-  "\ucd5c\uace0\uc758 \uc120\ud0dd",
-  CUSTOMER_HONORIFIC,
-  "\uc81c\uacf5\ud569\ub2c8\ub2e4",
-].join(", ");
 
 export function buildCtaPrompt(product: ProductInfo, tone: Tone): string {
   return [
@@ -28,13 +19,13 @@ export function buildCtaPrompt(product: ProductInfo, tone: Tone): string {
     "- Make the closing line and action line use the selected tone's sentence length, rhythm, and information amount.",
     "- Advertising-copy style is allowed.",
     "- Short fragments, noun phrases, and incomplete copy-style lines are allowed.",
-    `- Minimize formal endings like ~${FORMAL_ENDING_IPNIDA} and ~${FORMAL_ENDING_SEUMNIDA}.`,
-    "- Avoid generic AI-like praise, exaggerated claims, and absolute promises.",
     "- Do not invent effects, certifications, rankings, prices, discounts, or guarantees.",
-    `- Do not use or closely imitate these phrases: ${BANNED_CTA_PHRASES}.`,
+    "- Do not use or closely imitate hard-selling phrases like '\uc9c0\uae08 \uad6c\ub9e4\ud558\uc138\uc694'.",
     "",
     "Selected tone rule:",
     getTonePromptRule(tone, "cta"),
+    "",
+    getCommonCopyRules(),
     "",
     "Product context:",
     `- Brand: ${product.brandName}`,
