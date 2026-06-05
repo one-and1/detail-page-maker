@@ -14,24 +14,47 @@ type ToneRule = {
   informationDensity: string;
   copyRhythm: string;
   example: string;
+  requiredStyle?: string[];
+  bannedPatterns?: string[];
 };
 
 const toneRules: Record<Tone, ToneRule> = {
   premium: {
     description: "절제된 고급감과 완성도 중심의 표현",
     strategy:
-      "Lead with lasting value, finish, fit, and selection confidence. Do not lean on emotion, urgency, or luxury cliches.",
+      "Lead with lasting value, finish, fit, and selection confidence. Make it feel like restrained premium brand advertising, not an explanatory product note. Do not lean on emotion, urgency, or luxury cliches.",
     sentenceLength:
-      "Use short to medium-short sentences. Keep them compact, but avoid sounding casual or clipped.",
+      "Use short to medium-short complete Korean sentences. Keep them compact and natural, but do not use clipped note-style endings.",
     sentenceStructure:
-      "Prefer composed declarative lines, noun phrases, and a restrained final sentence that leaves space.",
+      "Prefer composed declarative lines and polished brand-copy sentences. Noun phrases are allowed only when they do not sound like shorthand or note-taking.",
     emotionLevel:
       "Low emotion. Use calm confidence instead of excitement, surprise, or sympathy.",
     informationDensity:
-      "Medium-low. Mention only the one value or quality that supports a refined choice.",
+      "Medium-low. Mention only the value, finish, or quality that supports a refined choice.",
     copyRhythm:
-      "Quiet, spacious, and deliberate. Avoid stacked adjectives, exclamation marks, and hard-selling.",
-    example: "오래 사용할수록 차이가 느껴지는 선택.",
+      "Quiet, spacious, and deliberate. Use value-centered lines with a clean final verb ending. Avoid stacked adjectives, exclamation marks, and hard-selling.",
+    example: "오래 사용할수록 차이가 느껴집니다.",
+    requiredStyle: [
+      "Use complete Korean sentences for Premium tone. Do not use eumseum-che shorthand or memo-style fragments.",
+      "Prefer refined brand-copy lines that sound polished, restrained, and value-centered.",
+      "Keep each line short, but make it read as a natural sentence with a clear ending.",
+      "When a shorthand claim appears in the input, rewrite it as buyer-facing value instead of preserving the shorthand.",
+      "Good Premium rhythm: '사용할수록 만족도가 자연스럽게 쌓입니다.'",
+    ],
+    bannedPatterns: [
+      "~높음",
+      "~적음",
+      "~강함",
+      "~가능",
+      "~느껴짐",
+      "~구성됨",
+      "만족도 높음",
+      "부담 적음",
+      "효과 강함",
+      "사용 가능",
+      "차이 느껴짐",
+      "구성됨",
+    ],
   },
   emotional: {
     description: "일상 상황과 감정 변화 중심의 자연스러운 표현",
@@ -142,6 +165,13 @@ export function getTonePromptRule(
   sectionKind: TonePromptSectionKind,
 ) {
   const rule = toneRules[tone];
+  const requiredStyleLines =
+    rule.requiredStyle?.map((item) => `- Premium required style: ${item}`) ?? [];
+  const bannedPatternLines = rule.bannedPatterns
+    ? [
+        `- Premium banned or strongly minimized endings/patterns: ${rule.bannedPatterns.join(", ")}`,
+      ]
+    : [];
 
   return [
     `${tone.toUpperCase()} tone strategy:`,
@@ -152,6 +182,8 @@ export function getTonePromptRule(
     `- Information amount: ${rule.informationDensity}`,
     `- Copy rhythm: ${rule.copyRhythm}`,
     `- Section focus: ${sectionToneFocus[sectionKind][tone]}`,
+    ...requiredStyleLines,
+    ...bannedPatternLines,
     `- Reference example for rhythm only, do not copy: "${rule.example}"`,
   ].join("\n");
 }
