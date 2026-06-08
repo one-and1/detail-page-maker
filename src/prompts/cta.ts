@@ -1,4 +1,5 @@
 import type { ProductInfo, Tone } from "@/src/types";
+import { getCategoryPromptRule } from "@/src/prompts/category-rules";
 import { getCommonCopyRules } from "@/src/prompts/copy-rules";
 import { getTonePromptRule } from "@/src/prompts/tone-rules";
 
@@ -28,6 +29,8 @@ export function buildCtaPrompt(product: ProductInfo, tone: Tone): string {
     "",
     "Selected tone rule:",
     getTonePromptRule(tone, "cta"),
+    "",
+    getCategoryPromptRule(product, "cta"),
     "",
     getCommonCopyRules(),
     "",
