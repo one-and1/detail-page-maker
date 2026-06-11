@@ -3,6 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { TONE_LABELS } from "@/src/lib/tone-system";
 import type { DetailSection, ProductInfo } from "@/src/types";
+import { Badge } from "@/src/components/ui/badge";
+import { Button } from "@/src/components/ui/button";
+import { Card, CardBody, CardHeader } from "@/src/components/ui/card";
+import { Caption, Headline, Text } from "@/src/components/ui/typography";
+import { cn } from "@/src/lib/class-names";
+import { fieldControlClass, previewContainerClass } from "@/src/lib/design-system";
 
 type Props = {
   product: ProductInfo;
@@ -107,26 +113,37 @@ export function DetailPreview({
   const projectName = product.projectName.trim() || FALLBACK_PROJECT_NAME;
 
   return (
-    <article className="min-w-0 rounded-lg border border-zinc-200 bg-white shadow-sm">
-      <header className="border-b border-zinc-200 px-5 py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <Card as="article" className="min-w-0 overflow-hidden rounded-lg" padding="none">
+      <CardHeader className="border-b-0 bg-[linear-gradient(135deg,#0f172a_0%,#155e75_58%,#f59e0b_145%)] px-6 py-7 text-white">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-medium text-zinc-500">섹션 미리보기</p>
-            <h2 className="mt-1 text-lg font-semibold tracking-tight">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="border-white/25 bg-white/15 text-white" tone="neutral">
+                PREVIEW
+              </Badge>
+              <Badge className="border-amber-200/40 bg-amber-200/20 text-amber-50" tone="point">
+                {sections.length} SECTIONS
+              </Badge>
+              <Badge className="border-cyan-100/30 bg-cyan-100/15 text-cyan-50" tone="info">
+                {TONE_LABELS[product.tone]}
+              </Badge>
+            </div>
+            <Headline className="mt-4 text-2xl font-semibold text-white">
               {product.brandName} {product.productName}
-            </h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              {projectName} · {TONE_LABELS[product.tone]}
-            </p>
+            </Headline>
+            <Caption className="mt-2 max-w-xl text-sm leading-6 text-cyan-50/85">
+              {projectName} · {product.category}
+            </Caption>
           </div>
           <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-            <button
+            <Button
               type="button"
-              className="rounded-md bg-zinc-900 px-3 py-2 text-xs font-medium text-white transition hover:bg-zinc-700"
+              size="lg"
+              variant="primary"
               onClick={() => copyText(formatAllSectionsForCopy(sections), "all")}
             >
               전체 복사
-            </button>
+            </Button>
             {copyStatus?.target === "all" ? (
               <p
                 className={
@@ -141,47 +158,46 @@ export function DetailPreview({
             ) : null}
           </div>
         </div>
-      </header>
+      </CardHeader>
 
-      <div className="mx-auto max-w-2xl px-5 py-8">
+      <CardBody className={cn(previewContainerClass, "grid gap-6 py-6")}>
         {sections.map((section, index) => (
           <section
             key={section.id}
-            className={index === 0 ? "" : "mt-10 border-t border-zinc-100 pt-10"}
+            className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_10px_28px_-24px_rgb(15_23_42_/_0.55)]"
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4 rounded-md border border-slate-200 border-l-4 border-l-cyan-600 bg-slate-50 px-4 py-3">
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                  {section.kind}
-                </p>
-                <h3 className="mt-2 text-xl font-semibold tracking-tight">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={index === 0 ? "hot" : "info"}>{section.kind}</Badge>
+                  {index === 0 ? <Badge tone="new">HERO</Badge> : null}
+                </div>
+                <Text as="h3" className="mt-3" variant="headline">
                   {section.title}
-                </h3>
+                </Text>
               </div>
               <div className="flex shrink-0 flex-col items-end gap-2">
                 <div className="flex flex-wrap justify-end gap-2">
-                  <button
+                  <Button
                     type="button"
-                    className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100"
                     onClick={() => copyText(formatSectionForCopy(section), section.id)}
                   >
                     복사
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100"
+                    variant="primary"
                     onClick={() => regenerateSection(section.id)}
                   >
                     다시 생성
-                  </button>
+                  </Button>
                   {editingSectionId !== section.id ? (
-                    <button
+                    <Button
                       type="button"
-                      className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100"
                       onClick={() => startEditing(section)}
                     >
                       수정
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
                 {copyStatus?.target === section.id ? (
@@ -200,42 +216,41 @@ export function DetailPreview({
             </div>
 
             {editingSectionId === section.id ? (
-              <div className="mt-4 grid gap-3">
+              <div className="mt-5 grid gap-3">
                 <textarea
-                  className="min-h-48 w-full resize-y rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm leading-7 text-zinc-950 outline-none transition focus:border-zinc-900 focus:ring-2 focus:ring-zinc-200"
+                  className={cn(fieldControlClass, "min-h-48 resize-y leading-7")}
                   value={draftCopy}
                   onChange={(event) => setDraftCopy(event.target.value)}
                 />
                 <div className="flex flex-wrap gap-2">
-                  <button
+                  <Button
                     type="button"
-                    className="rounded-md bg-zinc-900 px-3 py-2 text-xs font-medium text-white transition hover:bg-zinc-700"
+                    variant="primary"
                     onClick={() => saveEditing(section.id)}
                   >
                     저장
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100"
                     onClick={cancelEditing}
                   >
                     취소
-                  </button>
+                  </Button>
                 </div>
               </div>
             ) : (
-              <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-zinc-700">
+              <div className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-700">
                 {section.copy}
               </div>
             )}
           </section>
         ))}
 
-        <footer className="mt-10 border-t border-zinc-100 pt-6 text-xs leading-6 text-zinc-500">
+        <footer className="mt-10 border-t border-slate-100 pt-6 text-xs leading-6 text-slate-500">
           <p>금지 표현: {product.forbiddenPhrases || "입력 없음"}</p>
           <p>내부 메모: {product.notes || "입력 없음"}</p>
         </footer>
-      </div>
-    </article>
+      </CardBody>
+    </Card>
   );
 }

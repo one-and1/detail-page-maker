@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { DetailPreview } from "@/src/components/detail-preview";
 import { ProductInputForm } from "@/src/components/product-input-form";
 import { SectionListPanel } from "@/src/components/section-list-panel";
+import { Badge } from "@/src/components/ui/badge";
+import { Button } from "@/src/components/ui/button";
+import { Card } from "@/src/components/ui/card";
+import { SectionContainer } from "@/src/components/ui/section-container";
 import {
   clearSectionCopyCache,
   createSectionCacheKey,
@@ -353,58 +357,56 @@ export function DetailWorkspace() {
     : "없음";
 
   return (
-    <main className="min-h-screen bg-zinc-100 text-zinc-950">
-      <header className="border-b border-zinc-200 bg-white px-5 py-4">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <main className="min-h-screen bg-slate-100 text-slate-950">
+      <header className="border-b border-slate-200 bg-white px-5 py-4">
+        <div className="mx-auto flex max-w-[var(--section-max-width)] flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex flex-col gap-1">
-            <p className="text-xs font-medium text-zinc-500">개인 외주용 MVP</p>
+            <p className="text-xs font-medium text-slate-500">개인 외주용 MVP</p>
             <h1 className="text-xl font-semibold tracking-tight">
               상세페이지 제작기
             </h1>
-            <p className="text-sm text-zinc-500">
+            <p className="text-sm text-slate-500">
               현재 단계는 API 호출 없이 입력값과 더미 카피만으로 섹션 미리보기를
               조립합니다.
             </p>
             <div className="mt-3 flex flex-wrap gap-2 text-sm">
-              <span className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-1.5 font-medium text-zinc-800">
+              <Badge tone="point" className="font-medium">
                 {currentProjectName}
-              </span>
-              <span className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-zinc-600">
+              </Badge>
+              <Badge tone="neutral">
                 {currentClientName}
-              </span>
+              </Badge>
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs text-zinc-600 lg:min-w-80">
+          <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 lg:min-w-80">
             <div className="flex flex-wrap items-center gap-2">
-              <button
+              <Button
                 type="button"
-                className="rounded-md bg-zinc-900 px-3 py-2 font-medium text-white transition hover:bg-zinc-700"
+                variant="primary"
                 onClick={handleSave}
               >
                 저장
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="rounded-md border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100"
                 onClick={handleLoad}
               >
                 불러오기
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="rounded-md border border-red-200 bg-white px-3 py-2 font-medium text-red-700 transition hover:border-red-300 hover:bg-red-50"
+                variant="danger"
                 onClick={handleReset}
               >
                 초기화
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="rounded-md border border-zinc-300 bg-white px-3 py-2 font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100"
                 onClick={handleClearCache}
               >
                 캐시 초기화
-              </button>
+              </Button>
             </div>
             <div className="leading-5">
               <p>마지막 저장: {formattedLastSavedAt}</p>
@@ -414,51 +416,51 @@ export function DetailWorkspace() {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-5 px-5 py-5 lg:grid-cols-[420px_minmax(0,1fr)]">
+      <SectionContainer className="lg:grid-cols-[420px_minmax(0,1fr)]">
         <aside className="grid min-w-0 content-start gap-5">
-          <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+          <Card as="section">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold">사용량</h2>
-                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                <p className="mt-1 text-xs leading-5 text-slate-500">
                   더미 생성 흐름과 캐시 재사용을 오늘 기준으로 추적합니다.
                 </p>
               </div>
-              <button
+              <Button
                 type="button"
-                className="shrink-0 rounded-md border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-100"
+                className="shrink-0"
                 onClick={handleClearUsage}
               >
                 초기화
-              </button>
+              </Button>
             </div>
             <dl className="grid grid-cols-2 gap-3">
-              <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                <dt className="text-xs text-zinc-500">오늘 생성 횟수</dt>
-                <dd className="mt-1 text-lg font-semibold text-zinc-950">
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                <dt className="text-xs text-slate-500">오늘 생성 횟수</dt>
+                <dd className="mt-1 text-lg font-semibold text-slate-950">
                   {usageStats.totalGenerations}
                 </dd>
               </div>
-              <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                <dt className="text-xs text-zinc-500">캐시 재사용 횟수</dt>
-                <dd className="mt-1 text-lg font-semibold text-zinc-950">
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                <dt className="text-xs text-slate-500">캐시 재사용 횟수</dt>
+                <dd className="mt-1 text-lg font-semibold text-slate-950">
                   {usageStats.cacheHits}
                 </dd>
               </div>
-              <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                <dt className="text-xs text-zinc-500">절약된 예상 요청 수</dt>
-                <dd className="mt-1 text-lg font-semibold text-zinc-950">
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                <dt className="text-xs text-slate-500">절약된 예상 요청 수</dt>
+                <dd className="mt-1 text-lg font-semibold text-slate-950">
                   {usageStats.estimatedSavedRequests}
                 </dd>
               </div>
-              <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3">
-                <dt className="text-xs text-zinc-500">마지막 생성 시간</dt>
-                <dd className="mt-1 text-sm font-semibold text-zinc-950">
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                <dt className="text-xs text-slate-500">마지막 생성 시간</dt>
+                <dd className="mt-1 text-sm font-semibold text-slate-950">
                   {formattedLastGeneratedAt}
                 </dd>
               </div>
             </dl>
-          </section>
+          </Card>
           <ProductInputForm value={product} onChange={handleProductChange} />
         </aside>
 
@@ -471,7 +473,7 @@ export function DetailWorkspace() {
             onSectionRegenerate={handleSectionRegenerate}
           />
         </section>
-      </div>
+      </SectionContainer>
     </main>
   );
 }
