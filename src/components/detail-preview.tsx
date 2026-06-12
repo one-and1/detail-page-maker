@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TONE_LABELS } from "@/src/lib/tone-system";
-import type { DetailSection, ProductInfo } from "@/src/types";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/src/components/ui/card";
 import { Caption, Headline, Text } from "@/src/components/ui/typography";
 import { cn } from "@/src/lib/class-names";
 import { fieldControlClass, previewContainerClass } from "@/src/lib/design-system";
+import { TONE_LABELS } from "@/src/lib/tone-system";
+import type { DetailSection, ProductInfo } from "@/src/types";
 
 type Props = {
   product: ProductInfo;
@@ -17,8 +17,6 @@ type Props = {
   onSectionRegenerate: (sectionId: DetailSection["id"]) => void | Promise<void>;
 };
 
-const FALLBACK_PROJECT_NAME = "새 프로젝트";
-
 type CopyTarget = "all" | DetailSection["id"];
 type CopyStatus = {
   kind: "success" | "error";
@@ -26,18 +24,26 @@ type CopyStatus = {
   message: string;
 } | null;
 
+const FALLBACK_PROJECT_NAME = "새 프로젝트";
+
 const formatSectionForCopy = (section: DetailSection) =>
   `${section.title}\n\n${section.copy.trim()}`;
 
 const formatAllSectionsForCopy = (sections: DetailSection[]) =>
   sections.map(formatSectionForCopy).join("\n\n---\n\n");
 
+const stripListMarker = (line: string) =>
+  line.replace(/^[-*•\d.)\s]+/, "").trim();
+
+const getContentLines = (copy: string) =>
+  copy
+    .split(/\n+/)
+    .map((line) => stripListMarker(line.trim()))
+    .filter(Boolean);
+
 const getHeroSubCopy = (section: DetailSection, product: ProductInfo) => {
   const productLabel = `${product.brandName} ${product.productName}`.trim();
-  const candidates = section.copy
-    .split(/\n{2,}|\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const candidates = getContentLines(section.copy);
 
   return (
     candidates.find(
@@ -48,6 +54,167 @@ const getHeroSubCopy = (section: DetailSection, product: ProductInfo) => {
     "첫 화면에서 고객이 바로 이해할 수 있는 핵심 메시지를 배치합니다."
   );
 };
+
+type UspItem = {
+  title: string;
+  description: string;
+};
+
+type SpecRow = {
+  label: string;
+  value: string;
+};
+
+const truncateText = (text: string, maxLength: number) =>
+  text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
+
+const getShortUspTitle = (text: string) => {
+  const normalizedText = text.replace(/\s+/g, " ").trim();
+  const phrase = normalizedText
+    .split(/(?:으로|로|에도|에서|까지|,|，|\.|!|\?)/)[0]
+    .trim();
+
+  return phrase || normalizedText;
+};
+
+const toUspItem = (line: string): UspItem => {
+  const [rawTitle, ...rest] = line.split(/[:：]/);
+  const colonDescription = rest.join(":").trim();
+
+  if (colonDescription) {
+    return {
+      title: getShortUspTitle(rawTitle),
+      description: truncateText(colonDescription, 76),
+    };
+  }
+
+  const [firstSentence, ...remainingSentences] = line
+    .split(/[.!?。]|[,，]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const title = getShortUspTitle(firstSentence || line);
+  const description = remainingSentences.join(" ") || line;
+
+  return {
+    title,
+    description: truncateText(description, 76),
+  };
+};
+
+const getUspItems = (section: DetailSection, product: ProductInfo) => {
+  const lines = getContentLines(section.copy).filter(
+    (line) => line !== section.title,
+  );
+  const source = lines.length > 0 ? lines : getContentLines(product.usp);
+
+  if (source.length > 1) {
+    return source.slice(0, 4);
+  }
+
+  return (source[0] || section.description || product.usp)
+    .split(/[,.·]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 4);
+};
+
+const getUspCards = (section: DetailSection, product: ProductInfo) =>
+  getUspItems(section, product).map(toUspItem);
+
+const SPEC_LABELS = [
+  "소재",
+  "재질",
+  "충전재",
+  "사이즈",
+  "색상",
+  "컬러",
+  "무게",
+  "중량",
+  "구성",
+  "원산지",
+  "제조국",
+  "대상",
+  "용도",
+  "카테고리",
+  "브랜드",
+] as const;
+
+const normalizeSpecLabel = (label: string) =>
+  label
+    .replace(/제품\s*스펙|스펙|구매\s*전\s*확인|확인하세요/gi, "")
+    .trim();
+
+const parseSpecLine = (line: string): SpecRow | null => {
+  const compactLine = line.replace(/\s+/g, " ").trim();
+
+  if (!compactLine || compactLine.length > 96) {
+    return null;
+  }
+
+  const [rawLabel, ...colonRest] = compactLine.split(/[:：]/);
+  const colonValue = colonRest.join(":").trim();
+  const normalizedLabel = normalizeSpecLabel(rawLabel);
+
+  if (colonValue && normalizedLabel && normalizedLabel.length <= 12) {
+    return {
+      label: normalizedLabel,
+      value: colonValue,
+    };
+  }
+
+  const matchedLabel = SPEC_LABELS.find((label) =>
+    compactLine.startsWith(label),
+  );
+
+  if (matchedLabel) {
+    const value = compactLine
+      .slice(matchedLabel.length)
+      .replace(/^[-\s/|·:：]+/, "")
+      .trim();
+
+    if (value) {
+      return {
+        label: matchedLabel === "컬러" ? "색상" : matchedLabel,
+        value,
+      };
+    }
+  }
+
+  return null;
+};
+
+const getSpecRows = (section: DetailSection, product: ProductInfo) => {
+  const source = [
+    ...getContentLines(product.specs),
+    ...getContentLines(section.copy).filter((line) => line !== section.title),
+  ];
+  const rows: SpecRow[] = [];
+  const seenLabels = new Set<string>();
+
+  source.forEach((line) => {
+    const row = parseSpecLine(line);
+
+    if (!row || seenLabels.has(row.label)) {
+      return;
+    }
+
+    seenLabels.add(row.label);
+    rows.push(row);
+  });
+
+  const fallbackRows: SpecRow[] = [
+    { label: "브랜드", value: product.brandName },
+    { label: "제품명", value: product.productName },
+    { label: "카테고리", value: product.category },
+  ].filter((row) => row.value.trim());
+
+  return (rows.length > 0 ? rows : fallbackRows).slice(0, 8);
+};
+
+const getSpecHighlight = (rows: SpecRow[]) =>
+  rows.find((row) =>
+    ["소재", "재질", "충전재", "사이즈", "색상"].includes(row.label),
+  );
 
 export function DetailPreview({
   product,
@@ -179,8 +346,22 @@ export function DetailPreview({
     </div>
   );
 
-  const renderSectionEditor = (section: DetailSection) =>
-    editingSectionId === section.id ? (
+  const renderManagementHeader = (section: DetailSection, label: string) => (
+    <CardHeader className="flex items-start justify-between gap-3 bg-white px-4 py-3">
+      <Caption className="pt-2 text-slate-400">{label}</Caption>
+      {renderSectionActions(section)}
+    </CardHeader>
+  );
+
+  const renderSectionEditor = (
+    section: DetailSection,
+    options: { hideReadOnlyCopy?: boolean } = {},
+  ) => {
+    if (editingSectionId !== section.id && options.hideReadOnlyCopy) {
+      return null;
+    }
+
+    return editingSectionId === section.id ? (
       <div className="mt-5 grid gap-3">
         <textarea
           className={cn(fieldControlClass, "min-h-48 resize-y leading-7")}
@@ -205,20 +386,21 @@ export function DetailPreview({
         {section.copy}
       </div>
     );
+  };
 
   const renderHeroSection = (section: DetailSection) => {
     const heroSubCopy = getHeroSubCopy(section, product);
 
     return (
-      <section
-        key={section.id}
+      <Card
+        as="section"
         id={`detail-section-${section.id}`}
-        className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-[var(--shadow-card-hover)]"
+        key={section.id}
+        className="overflow-hidden"
+        padding="none"
+        shadow="elevated"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-slate-100 bg-white px-4 py-3">
-          <Caption className="pt-2 text-slate-400">Hero 관리</Caption>
-          {renderSectionActions(section)}
-        </div>
+        {renderManagementHeader(section, "Hero 관리")}
 
         <div className="bg-[linear-gradient(135deg,#0f172a_0%,#155e75_58%,#f59e0b_150%)] px-5 py-8 text-white sm:px-7 sm:py-10">
           <div className="min-w-0 [writing-mode:horizontal-tb]">
@@ -269,21 +451,156 @@ export function DetailPreview({
           </div>
         </div>
 
-        <div className="border-t border-slate-100 px-5 pb-5 sm:px-7">
+        <CardBody className="border-t border-slate-100 px-5 pb-5 sm:px-7">
           {renderSectionEditor(section)}
-        </div>
-      </section>
+        </CardBody>
+      </Card>
+    );
+  };
+
+  const renderUspSection = (section: DetailSection) => {
+    const uspCards = getUspCards(section, product);
+    const pointTitle = uspCards[0]?.title || "가볍고 선명하게";
+
+    return (
+      <Card
+        as="section"
+        id={`detail-section-${section.id}`}
+        key={section.id}
+        className="overflow-hidden"
+        padding="none"
+        shadow="elevated"
+      >
+        {renderManagementHeader(section, "USP 관리")}
+
+        <CardBody className="bg-white px-4 py-5 sm:px-5 lg:px-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="primary">USP</Badge>
+            <Badge tone="point">KEY POINT</Badge>
+          </div>
+
+          <div className="mt-4">
+            <Headline className="text-2xl font-semibold text-slate-950">
+              {section.title}
+            </Headline>
+            <Caption className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              {section.description}
+            </Caption>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-2.5">
+            {uspCards.map((item, index) => (
+              <div
+                className="min-w-0 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-[0_12px_26px_-24px_rgb(15_23_42_/_0.7)]"
+                key={`${section.id}-usp-${item.title}-${index}`}
+              >
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
+                  <div className="min-w-0">
+                    <Text as="h3" className="whitespace-normal text-base font-semibold leading-6 text-slate-950 [word-break:keep-all]">
+                      {item.title}
+                    </Text>
+                    <Text className="mt-1.5 overflow-hidden text-sm leading-6 text-slate-600 [display:-webkit-box] [word-break:keep-all] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                      {item.description}
+                    </Text>
+                  </div>
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-slate-100 text-[10px] font-semibold text-slate-400">
+                    {index + 1}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-[0_10px_24px_-22px_rgb(180_83_9_/_0.55)]">
+            <Badge tone="point">POINT</Badge>
+            <Headline className="mt-2 text-lg font-semibold text-amber-950">
+              {pointTitle}
+            </Headline>
+          </div>
+
+          {renderSectionEditor(section, { hideReadOnlyCopy: true })}
+        </CardBody>
+      </Card>
+    );
+  };
+
+  const renderSpecSection = (section: DetailSection) => {
+    const specRows = getSpecRows(section, product);
+    const highlightRow = getSpecHighlight(specRows);
+
+    return (
+      <Card
+        as="section"
+        id={`detail-section-${section.id}`}
+        key={section.id}
+        className="overflow-hidden"
+        padding="none"
+      >
+        {renderManagementHeader(section, "Spec 관리")}
+
+        <CardBody className="bg-white px-5 py-6 sm:px-7">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="info">SPEC</Badge>
+            <Badge tone="secondary">DETAIL</Badge>
+          </div>
+
+          <div className="mt-4">
+            <Headline className="text-2xl font-semibold text-slate-950">
+              {section.title}
+            </Headline>
+            <Caption className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              {section.description}
+            </Caption>
+          </div>
+
+          {highlightRow ? (
+            <div className="mt-5 rounded-lg border border-cyan-200 bg-cyan-50 px-5 py-4">
+              <Caption className="font-semibold text-cyan-700">
+                대표 스펙
+              </Caption>
+              <Headline className="mt-2 text-xl font-semibold text-cyan-950">
+                {highlightRow.value}
+              </Headline>
+              <Caption className="mt-1 text-cyan-700">
+                {highlightRow.label}
+              </Caption>
+            </div>
+          ) : null}
+
+          <div className="mt-6 grid gap-3 md:grid-cols-2">
+            {specRows.map((row, index) => (
+              <div
+                className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4"
+                key={`${section.id}-spec-${row.label}-${index}`}
+              >
+                <Caption className="font-semibold text-slate-500">
+                  {row.label}
+                </Caption>
+                <Text className="mt-2 text-base font-semibold leading-7 text-slate-900 [word-break:keep-all]">
+                  {row.value}
+                </Text>
+              </div>
+            ))}
+          </div>
+
+          {renderSectionEditor(section, { hideReadOnlyCopy: true })}
+        </CardBody>
+      </Card>
     );
   };
 
   const renderDefaultSection = (section: DetailSection) => (
-    <section
-      key={section.id}
+    <Card
+      as="section"
       id={`detail-section-${section.id}`}
-      className="rounded-lg border border-slate-200 bg-white p-5 shadow-[0_10px_28px_-24px_rgb(15_23_42_/_0.55)]"
+      key={section.id}
+      className="overflow-hidden"
+      padding="none"
     >
-      <div className="flex items-start justify-between gap-4 rounded-md border border-slate-200 border-l-4 border-l-cyan-600 bg-slate-50 px-4 py-3">
-        <div className="min-w-0">
+      {renderManagementHeader(section, `${section.kind.toUpperCase()} 관리`)}
+
+      <CardBody className="px-5 py-5">
+        <div className="rounded-md border border-slate-200 border-l-4 border-l-cyan-600 bg-slate-50 px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="info">{section.kind}</Badge>
           </div>
@@ -291,11 +608,10 @@ export function DetailPreview({
             {section.title}
           </Text>
         </div>
-        {renderSectionActions(section)}
-      </div>
 
-      {renderSectionEditor(section)}
-    </section>
+        {renderSectionEditor(section)}
+      </CardBody>
+    </Card>
   );
 
   return (
@@ -336,9 +652,21 @@ export function DetailPreview({
       </CardHeader>
 
       <CardBody className={cn(previewContainerClass, "grid gap-6 py-6")}>
-        {sections.map((section, index) =>
-          index === 0 ? renderHeroSection(section) : renderDefaultSection(section),
-        )}
+        {sections.map((section, index) => {
+          if (index === 0) {
+            return renderHeroSection(section);
+          }
+
+          if (section.kind === "usp") {
+            return renderUspSection(section);
+          }
+
+          if (section.kind === "spec") {
+            return renderSpecSection(section);
+          }
+
+          return renderDefaultSection(section);
+        })}
 
         <footer className="mt-10 border-t border-slate-100 pt-6 text-xs leading-6 text-slate-500">
           <p>금지 표현: {product.forbiddenPhrases || "입력 없음"}</p>
