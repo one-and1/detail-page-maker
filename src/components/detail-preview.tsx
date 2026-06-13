@@ -65,6 +65,18 @@ type SpecRow = {
   value: string;
 };
 
+type CompareItem = {
+  label: string;
+  heading: string;
+  keywords: string[];
+};
+
+type CompareContent = {
+  before: CompareItem;
+  after: CompareItem;
+  point: string;
+};
+
 const truncateText = (text: string, maxLength: number) =>
   text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
 
@@ -215,6 +227,87 @@ const getSpecHighlight = (rows: SpecRow[]) =>
   rows.find((row) =>
     ["소재", "재질", "충전재", "사이즈", "색상"].includes(row.label),
   );
+
+const splitCompareSentences = (copy: string) =>
+  copy
+    .split(/[\n.!?。]+/)
+    .map((line) => stripListMarker(line.trim()))
+    .filter(Boolean);
+
+const normalizeCompareKeyword = (text: string) => {
+  const compactText = text
+    .replace(/이번 더미 초안은|더미|섹션|입니다|합니다|보여줍니다/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const keyword = compactText
+    .split(/(?:은|는|이|가|을|를|에게|에도|에서|으로|로|,|，| 때문에| 대신| 기준으로)/)[0]
+    .trim();
+
+  return truncateText(keyword || compactText, 16);
+};
+
+const getCompareKeywords = ({
+  fallbackItems,
+  lines,
+  pattern,
+}: {
+  fallbackItems: string[];
+  lines: string[];
+  pattern: RegExp;
+}) => {
+  const matchedItems = lines
+    .filter((line) => pattern.test(line))
+    .flatMap((line) => line.split(/[,，/|·]/))
+    .map(normalizeCompareKeyword)
+    .filter((item) => item.length >= 2);
+  const uniqueItems = [...matchedItems, ...fallbackItems].filter(
+    (item, index, items) => item && items.indexOf(item) === index,
+  );
+
+  return uniqueItems.slice(0, 4);
+};
+
+const getCompareContent = (
+  section: DetailSection,
+  product: ProductInfo,
+): CompareContent => {
+  const lines = splitCompareSentences(section.copy).filter(
+    (line) => line !== section.title,
+  );
+  const productName = product.productName.trim() || "이 제품";
+  const primaryUsp =
+    getContentLines(product.usp)[0] || "선택 기준이 분명한 사용감";
+  const beforeKeywords = getCompareKeywords({
+    lines,
+    pattern: /기존|문제|불편|부담|애매|고민|어려|답답|무거/,
+    fallbackItems: ["선택 기준 애매", "불편한 사용감", "관리 부담"],
+  });
+  const afterKeywords = getCompareKeywords({
+    lines: [...getContentLines(product.usp), ...getContentLines(product.specs), ...lines],
+    pattern: /해결|대신|우리|제품|상품|가능|가벼|편한|방수|분리|관리|보온|활동/,
+    fallbackItems: [
+      normalizeCompareKeyword(primaryUsp),
+      productName,
+      product.category ? `${product.category} 맞춤` : "쉬운 선택",
+    ],
+  });
+  const pointSource =
+    afterKeywords[0] || normalizeCompareKeyword(primaryUsp) || productName;
+
+  return {
+    before: {
+      label: "BEFORE",
+      heading: "기존 방식",
+      keywords: beforeKeywords,
+    },
+    after: {
+      label: "AFTER",
+      heading: "우리 제품",
+      keywords: afterKeywords,
+    },
+    point: `${pointSource}으로 선택 이유를 명확하게`,
+  };
+};
 
 export function DetailPreview({
   product,
@@ -589,6 +682,93 @@ export function DetailPreview({
     );
   };
 
+  const renderCompareSection = (section: DetailSection) => {
+    const compare = getCompareContent(section, product);
+
+    return (
+      <Card
+        as="section"
+        id={`detail-section-${section.id}`}
+        key={section.id}
+        className="overflow-hidden"
+        padding="none"
+        shadow="elevated"
+      >
+        {renderManagementHeader(section, "Compare 관리")}
+
+        <CardBody className="@container bg-white px-4 py-5 sm:px-5 lg:px-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="primary">COMPARE</Badge>
+            <Badge tone="point">WHY THIS</Badge>
+          </div>
+
+          <div className="mt-4">
+            <Headline className="text-2xl font-semibold text-slate-950">
+              {section.title}
+            </Headline>
+            <Caption className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              {section.description}
+            </Caption>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-3 @min-[720px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[720px]:items-stretch">
+            {[compare.before, compare.after].map((item, index) => (
+              <div
+                className={cn(
+                  "min-w-0 rounded-lg border px-4 py-4 shadow-[0_12px_26px_-24px_rgb(15_23_42_/_0.7)]",
+                  index === 0
+                    ? "border-slate-200 bg-slate-50 @min-[720px]:order-1"
+                    : "border-cyan-200 bg-cyan-50 @min-[720px]:order-3",
+                )}
+                key={`${section.id}-compare-${item.label}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <Badge tone={index === 0 ? "secondary" : "primary"}>
+                    {item.label}
+                  </Badge>
+                  <Caption className="text-xs font-semibold text-slate-500">
+                    {item.heading}
+                  </Caption>
+                </div>
+
+                <div className="mt-4 grid gap-2">
+                  {item.keywords.map((keyword) => (
+                    <div
+                      className={cn(
+                        "flex min-h-11 items-center rounded-md border bg-white px-3 text-sm font-semibold leading-5 text-slate-900 [word-break:keep-all]",
+                        index === 0 ? "border-slate-200" : "border-cyan-200",
+                      )}
+                      key={`${section.id}-${item.label}-${keyword}`}
+                    >
+                      {keyword}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div className="hidden @min-[720px]:order-2 @min-[720px]:flex @min-[720px]:items-center @min-[720px]:justify-center">
+              <span className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-xs font-semibold text-slate-500 shadow-[0_10px_24px_-22px_rgb(15_23_42_/_0.65)]">
+                VS
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-[0_10px_24px_-22px_rgb(180_83_9_/_0.55)]">
+            <div className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+              <Badge tone="point">POINT</Badge>
+              <Text className="text-sm font-semibold leading-6 text-amber-950 [word-break:keep-all]">
+                {compare.point}
+              </Text>
+            </div>
+          </div>
+
+          {renderSectionEditor(section, { hideReadOnlyCopy: true })}
+        </CardBody>
+      </Card>
+    );
+  };
+
   const renderDefaultSection = (section: DetailSection) => (
     <Card
       as="section"
@@ -663,6 +843,10 @@ export function DetailPreview({
 
           if (section.kind === "spec") {
             return renderSpecSection(section);
+          }
+
+          if (section.kind === "comparison") {
+            return renderCompareSection(section);
           }
 
           return renderDefaultSection(section);
