@@ -82,6 +82,12 @@ type FaqItem = {
   answer: string;
 };
 
+type CtaContent = {
+  subCopy: string;
+  buttonLabel: string;
+  note: string;
+};
+
 const truncateText = (text: string, maxLength: number) =>
   text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
 
@@ -375,6 +381,19 @@ const getFaqItems = (
           index,
     )
     .slice(0, 4);
+};
+
+const getCtaContent = (
+  section: DetailSection,
+  product: ProductInfo,
+): CtaContent => {
+  const productName = product.productName.trim() || "이 제품";
+
+  return {
+    subCopy: `${productName}을 지금 편하게 경험해보세요`,
+    buttonLabel: "구매하기",
+    note: "옵션 선택 후 구매 가능합니다.",
+  };
 };
 
 export function DetailPreview({
@@ -902,6 +921,59 @@ export function DetailPreview({
     );
   };
 
+  const renderCtaSection = (section: DetailSection) => {
+    const cta = getCtaContent(section, product);
+
+    return (
+      <Card
+        as="section"
+        id={`detail-section-${section.id}`}
+        key={section.id}
+        className="overflow-hidden"
+        padding="none"
+        shadow="elevated"
+      >
+        {renderManagementHeader(section, "CTA 관리")}
+
+        <CardBody className="bg-[linear-gradient(135deg,#0f172a_0%,#155e75_58%,#f59e0b_150%)] px-5 py-10 text-center text-white sm:px-7 sm:py-12">
+          <div className="flex flex-wrap justify-center gap-2">
+            <Badge className="border-white/25 bg-white/15 text-white" tone="neutral">
+              CTA
+            </Badge>
+            <Badge className="border-amber-200/40 bg-amber-200/20 text-amber-50" tone="point">
+              FINAL STEP
+            </Badge>
+          </div>
+
+          <div className="mx-auto mt-5 max-w-md">
+            <Caption className="text-sm font-semibold text-cyan-100 [word-break:keep-all]">
+              {brandName}
+            </Caption>
+            <Text className="mx-auto mt-3 text-sm font-semibold leading-6 text-white [word-break:keep-all] sm:text-base">
+              {cta.subCopy}
+            </Text>
+          </div>
+
+          <div className="mx-auto mt-8 max-w-lg">
+            <Button
+              type="button"
+              size="lg"
+              variant="primary"
+              className="min-h-20 w-full bg-amber-300 px-10 text-2xl font-semibold text-slate-950 shadow-[0_34px_70px_-22px_rgb(0_0_0_/_0.95)] ring-4 ring-amber-100 hover:bg-amber-200"
+            >
+              {cta.buttonLabel}
+            </Button>
+            <Caption className="mt-5 text-sm font-semibold text-white [word-break:keep-all]">
+              {cta.note}
+            </Caption>
+          </div>
+
+          {renderSectionEditor(section, { hideReadOnlyCopy: true })}
+        </CardBody>
+      </Card>
+    );
+  };
+
   const renderDefaultSection = (section: DetailSection) => (
     <Card
       as="section"
@@ -984,6 +1056,10 @@ export function DetailPreview({
 
           if (section.kind === "faq") {
             return renderFaqSection(section);
+          }
+
+          if (section.kind === "cta") {
+            return renderCtaSection(section);
           }
 
           return renderDefaultSection(section);
