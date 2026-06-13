@@ -77,6 +77,11 @@ type CompareContent = {
   point: string;
 };
 
+type FaqItem = {
+  question: string;
+  answer: string;
+};
+
 const truncateText = (text: string, maxLength: number) =>
   text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
 
@@ -307,6 +312,69 @@ const getCompareContent = (
     },
     point: `${pointSource}으로 선택 이유를 명확하게`,
   };
+};
+
+const cleanFaqLine = (line: string) =>
+  stripListMarker(line)
+    .replace(/^(?:Q|질문)\s*[.)：:]\s*/i, "")
+    .replace(/^(?:A|답변)\s*[.)：:]\s*/i, "")
+    .trim();
+
+const getFaqItems = (
+  section: DetailSection,
+  product: ProductInfo,
+): FaqItem[] => {
+  const lines = getContentLines(section.copy);
+  const items: FaqItem[] = [];
+  let currentQuestion = "";
+
+  lines.forEach((line) => {
+    if (/^(?:Q|질문)\s*[.)：:]/i.test(line)) {
+      currentQuestion = cleanFaqLine(line);
+      return;
+    }
+
+    if (/^(?:A|답변)\s*[.)：:]/i.test(line)) {
+      const answer = cleanFaqLine(line);
+
+      if (currentQuestion && answer) {
+        items.push({
+          question: truncateText(currentQuestion, 54),
+          answer: truncateText(answer, 92),
+        });
+        currentQuestion = "";
+      }
+    }
+  });
+
+  const fallbackItems: FaqItem[] = [
+    {
+      question: "어떤 고객에게 적합한가요?",
+      answer: `${product.targetAudience || "주요 고객"}에게 맞춘 사용 상황을 제안합니다.`,
+    },
+    {
+      question: "구매 전 무엇을 확인하면 좋나요?",
+      answer: product.specs
+        ? truncateText(getContentLines(product.specs)[0] || product.specs, 92)
+        : "옵션, 구성, 사용 조건을 먼저 확인해 주세요.",
+    },
+    {
+      question: "핵심 장점은 무엇인가요?",
+      answer: product.usp
+        ? truncateText(getContentLines(product.usp)[0] || product.usp, 92)
+        : "상품의 핵심 포인트를 짧게 확인할 수 있습니다.",
+    },
+  ];
+
+  return [...items, ...fallbackItems]
+    .filter(
+      (item, index, source) =>
+        item.question &&
+        item.answer &&
+        source.findIndex((candidate) => candidate.question === item.question) ===
+          index,
+    )
+    .slice(0, 4);
 };
 
 export function DetailPreview({
@@ -769,6 +837,71 @@ export function DetailPreview({
     );
   };
 
+  const renderFaqSection = (section: DetailSection) => {
+    const faqItems = getFaqItems(section, product);
+
+    return (
+      <Card
+        as="section"
+        id={`detail-section-${section.id}`}
+        key={section.id}
+        className="overflow-hidden"
+        padding="none"
+        shadow="elevated"
+      >
+        {renderManagementHeader(section, "FAQ 관리")}
+
+        <CardBody className="bg-white px-4 py-5 sm:px-5 lg:px-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="info">FAQ</Badge>
+            <Badge tone="secondary">Q&A</Badge>
+          </div>
+
+          <div className="mt-4">
+            <Headline className="text-2xl font-semibold text-slate-950">
+              {section.title}
+            </Headline>
+            <Caption className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              {section.description}
+            </Caption>
+          </div>
+
+          <div className="mt-5 grid gap-3">
+            {faqItems.map((item, index) => (
+              <div
+                className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 shadow-[0_12px_26px_-24px_rgb(15_23_42_/_0.7)]"
+                key={`${section.id}-faq-${item.question}-${index}`}
+              >
+                <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md border border-cyan-200 bg-cyan-50 text-xs font-semibold text-cyan-700">
+                    Q
+                  </span>
+                  <Text
+                    as="h3"
+                    className="pt-0.5 text-base font-semibold leading-6 text-slate-950 [word-break:keep-all]"
+                  >
+                    {item.question}
+                  </Text>
+                </div>
+
+                <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-md border border-slate-200 bg-white px-3 py-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-xs font-semibold text-amber-700">
+                    A
+                  </span>
+                  <Text className="overflow-hidden text-sm leading-6 text-slate-700 [display:-webkit-box] [word-break:keep-all] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+                    {item.answer}
+                  </Text>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {renderSectionEditor(section, { hideReadOnlyCopy: true })}
+        </CardBody>
+      </Card>
+    );
+  };
+
   const renderDefaultSection = (section: DetailSection) => (
     <Card
       as="section"
@@ -847,6 +980,10 @@ export function DetailPreview({
 
           if (section.kind === "comparison") {
             return renderCompareSection(section);
+          }
+
+          if (section.kind === "faq") {
+            return renderFaqSection(section);
           }
 
           return renderDefaultSection(section);
