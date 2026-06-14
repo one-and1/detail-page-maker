@@ -416,7 +416,7 @@ export function DetailWorkspace() {
         </div>
       </header>
 
-      <SectionContainer className="lg:grid-cols-[420px_minmax(0,1fr)]">
+      <SectionContainer className="lg:grid-cols-[400px_minmax(0,1fr)]">
         <aside className="grid min-w-0 content-start gap-5">
           <Card as="section">
             <div className="mb-4 flex items-start justify-between gap-3">
@@ -464,7 +464,7 @@ export function DetailWorkspace() {
           <ProductInputForm value={product} onChange={handleProductChange} />
         </aside>
 
-        <section className="grid min-w-0 gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <section className="grid min-w-0 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
           <SectionListPanel sections={sections} />
           <DetailPreview
             product={product}
