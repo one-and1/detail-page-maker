@@ -24,6 +24,22 @@ type CopyStatus = {
   message: string;
 } | null;
 
+const previewSectionCardClass = "overflow-hidden";
+const previewSectionBodyClass = "bg-white px-5 py-6 sm:px-7";
+const previewGradientClass =
+  "bg-[linear-gradient(135deg,#0f172a_0%,#155e75_58%,#f59e0b_150%)]";
+const previewBadgeRowClass = "flex flex-wrap items-center gap-2";
+const previewIntroClass = "mt-4";
+const previewHeadingClass = "text-2xl font-semibold leading-tight text-slate-950";
+const previewDescriptionClass = "mt-2 max-w-2xl text-sm leading-6 text-slate-500";
+const previewItemGridClass = "mt-5 grid gap-3";
+const previewItemCardClass =
+  "min-w-0 rounded-lg border border-slate-200 shadow-[0_12px_26px_-24px_rgb(15_23_42_/_0.7)]";
+const previewPointCardClass =
+  "mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-[0_10px_24px_-22px_rgb(180_83_9_/_0.55)]";
+const previewPrimaryCtaClass =
+  "min-h-12 bg-amber-300 px-6 text-base font-semibold text-slate-950 shadow-lg shadow-slate-950/20 ring-1 ring-amber-100 hover:bg-amber-200";
+
 const FALLBACK_PROJECT_NAME = "새 프로젝트";
 
 const formatSectionForCopy = (section: DetailSection) =>
@@ -402,6 +418,9 @@ export function DetailPreview({
   onSectionCopyChange,
   onSectionRegenerate,
 }: Props) {
+  const [selectedSectionId, setSelectedSectionId] = useState<
+    DetailSection["id"] | null
+  >(sections[0]?.id ?? null);
   const [editingSectionId, setEditingSectionId] = useState<
     DetailSection["id"] | null
   >(null);
@@ -452,6 +471,7 @@ export function DetailPreview({
   };
 
   const startEditing = (section: DetailSection) => {
+    setSelectedSectionId(section.id);
     setEditingSectionId(section.id);
     setDraftCopy(section.copy);
   };
@@ -485,6 +505,10 @@ export function DetailPreview({
   const heroProductName = product.productName.trim() || projectName;
   const productLabel =
     `${product.brandName} ${product.productName}`.trim() || projectName;
+  const selectedSection =
+    sections.find((section) => section.id === selectedSectionId) ??
+    sections[0] ??
+    null;
 
   const renderCopyStatus = (target: CopyTarget) =>
     copyStatus?.target === target ? (
@@ -500,36 +524,92 @@ export function DetailPreview({
       </p>
     ) : null;
 
-  const renderSectionActions = (section: DetailSection) => (
-    <div className="flex shrink-0 flex-col items-end gap-2">
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          type="button"
-          onClick={() => copyText(formatSectionForCopy(section), section.id)}
-        >
-          복사
-        </Button>
-        <Button
-          type="button"
-          variant="primary"
-          onClick={() => regenerateSection(section.id)}
-        >
-          다시 생성
-        </Button>
-        {editingSectionId !== section.id ? (
-          <Button type="button" onClick={() => startEditing(section)}>
-            수정
-          </Button>
-        ) : null}
-      </div>
-      {renderCopyStatus(section.id)}
-    </div>
-  );
+  const renderPreviewToolbar = () => (
+    <CardHeader className="border-b border-slate-200 bg-white px-4 py-4 sm:px-5">
+      <div className="grid gap-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className={previewBadgeRowClass}>
+              <Badge tone="neutral">PREVIEW TOOLBAR</Badge>
+              <Badge tone="point">{sections.length} SECTIONS</Badge>
+            </div>
+            <Caption className="mt-2 max-w-xl text-sm leading-6 text-slate-500">
+              {productLabel} · {projectName} · {product.category}
+            </Caption>
+            <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
+              <Caption className="text-slate-500">선택 섹션</Caption>
+              <Badge tone="primary" className="max-w-full truncate">
+                {selectedSection?.title ?? "섹션 없음"}
+              </Badge>
+            </div>
+          </div>
 
-  const renderManagementHeader = (section: DetailSection, label: string) => (
-    <CardHeader className="flex items-start justify-between gap-3 bg-white px-4 py-3">
-      <Caption className="pt-2 text-slate-400">{label}</Caption>
-      {renderSectionActions(section)}
+          <div className="flex min-w-0 flex-col items-start gap-2 lg:items-end">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="md"
+                variant="primary"
+                onClick={() => copyText(formatAllSectionsForCopy(sections), "all")}
+              >
+                전체 복사
+              </Button>
+              <Button
+                type="button"
+                size="md"
+                disabled={!selectedSection}
+                onClick={() =>
+                  selectedSection
+                    ? copyText(formatSectionForCopy(selectedSection), selectedSection.id)
+                    : undefined
+                }
+              >
+                섹션 복사
+              </Button>
+              <Button
+                type="button"
+                size="md"
+                disabled={!selectedSection}
+                onClick={() =>
+                  selectedSection ? regenerateSection(selectedSection.id) : undefined
+                }
+              >
+                다시 생성
+              </Button>
+              {selectedSection && editingSectionId !== selectedSection.id ? (
+                <Button
+                  type="button"
+                  size="md"
+                  disabled={!selectedSection}
+                  onClick={() => startEditing(selectedSection)}
+                >
+                  수정
+                </Button>
+              ) : null}
+            </div>
+            {renderCopyStatus("all")}
+            {selectedSection ? renderCopyStatus(selectedSection.id) : null}
+          </div>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {sections.map((section) => {
+            const isSelected = section.id === selectedSection?.id;
+
+            return (
+              <Button
+                type="button"
+                key={`preview-toolbar-${section.id}`}
+                variant={isSelected ? "primary" : "secondary"}
+                className="whitespace-nowrap"
+                onClick={() => setSelectedSectionId(section.id)}
+              >
+                {section.kind.toUpperCase()}
+              </Button>
+            );
+          })}
+        </div>
+      </div>
     </CardHeader>
   );
 
@@ -576,15 +656,13 @@ export function DetailPreview({
         as="section"
         id={`detail-section-${section.id}`}
         key={section.id}
-        className="overflow-hidden"
+        className={previewSectionCardClass}
         padding="none"
         shadow="elevated"
       >
-        {renderManagementHeader(section, "Hero 관리")}
-
-        <div className="bg-[linear-gradient(135deg,#0f172a_0%,#155e75_58%,#f59e0b_150%)] px-5 py-8 text-white sm:px-7 sm:py-10">
+        <div className={cn(previewGradientClass, "px-5 py-8 text-white sm:px-7 sm:py-10")}>
           <div className="min-w-0 [writing-mode:horizontal-tb]">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className={previewBadgeRowClass}>
               <Badge className="border-white/25 bg-white/15 text-white" tone="neutral">
                 HERO
               </Badge>
@@ -610,7 +688,7 @@ export function DetailPreview({
                 type="button"
                 size="lg"
                 variant="primary"
-                className="min-h-12 bg-amber-300 px-6 text-base font-semibold text-slate-950 shadow-lg shadow-slate-950/20 ring-1 ring-amber-100 hover:bg-amber-200"
+                className={previewPrimaryCtaClass}
                 onClick={scrollToUspSection}
               >
                 핵심 포인트 확인하기
@@ -631,9 +709,11 @@ export function DetailPreview({
           </div>
         </div>
 
-        <CardBody className="border-t border-slate-100 px-5 pb-5 sm:px-7">
-          {renderSectionEditor(section)}
-        </CardBody>
+        {editingSectionId === section.id ? (
+          <CardBody className="border-t border-slate-100 px-5 pb-5 sm:px-7">
+            {renderSectionEditor(section, { hideReadOnlyCopy: true })}
+          </CardBody>
+        ) : null}
       </Card>
     );
   };
@@ -647,31 +727,29 @@ export function DetailPreview({
         as="section"
         id={`detail-section-${section.id}`}
         key={section.id}
-        className="overflow-hidden"
+        className={previewSectionCardClass}
         padding="none"
         shadow="elevated"
       >
-        {renderManagementHeader(section, "USP 관리")}
-
-        <CardBody className="bg-white px-4 py-5 sm:px-5 lg:px-6">
-          <div className="flex flex-wrap items-center gap-2">
+        <CardBody className={previewSectionBodyClass}>
+          <div className={previewBadgeRowClass}>
             <Badge tone="primary">USP</Badge>
             <Badge tone="point">KEY POINT</Badge>
           </div>
 
-          <div className="mt-4">
-            <Headline className="text-2xl font-semibold text-slate-950">
+          <div className={previewIntroClass}>
+            <Headline className={previewHeadingClass}>
               {section.title}
             </Headline>
-            <Caption className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            <Caption className={previewDescriptionClass}>
               {section.description}
             </Caption>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-2.5">
+          <div className={cn(previewItemGridClass, "grid-cols-1")}>
             {uspCards.map((item, index) => (
               <div
-                className="min-w-0 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-[0_12px_26px_-24px_rgb(15_23_42_/_0.7)]"
+                className={cn(previewItemCardClass, "bg-white px-4 py-4")}
                 key={`${section.id}-usp-${item.title}-${index}`}
               >
                 <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
@@ -691,7 +769,7 @@ export function DetailPreview({
             ))}
           </div>
 
-          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-[0_10px_24px_-22px_rgb(180_83_9_/_0.55)]">
+          <div className={previewPointCardClass}>
             <Badge tone="point">POINT</Badge>
             <Headline className="mt-2 text-lg font-semibold text-amber-950">
               {pointTitle}
@@ -713,32 +791,30 @@ export function DetailPreview({
         as="section"
         id={`detail-section-${section.id}`}
         key={section.id}
-        className="overflow-hidden"
+        className={previewSectionCardClass}
         padding="none"
       >
-        {renderManagementHeader(section, "Spec 관리")}
-
-        <CardBody className="bg-white px-5 py-6 sm:px-7">
-          <div className="flex flex-wrap items-center gap-2">
+        <CardBody className={previewSectionBodyClass}>
+          <div className={previewBadgeRowClass}>
             <Badge tone="info">SPEC</Badge>
             <Badge tone="secondary">DETAIL</Badge>
           </div>
 
-          <div className="mt-4">
-            <Headline className="text-2xl font-semibold text-slate-950">
+          <div className={previewIntroClass}>
+            <Headline className={previewHeadingClass}>
               {section.title}
             </Headline>
-            <Caption className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            <Caption className={previewDescriptionClass}>
               {section.description}
             </Caption>
           </div>
 
           {highlightRow ? (
-            <div className="mt-5 rounded-lg border border-cyan-200 bg-cyan-50 px-5 py-4">
+            <div className="mt-5 rounded-lg border border-cyan-200 bg-cyan-50 px-4 py-4 shadow-[0_12px_26px_-24px_rgb(8_145_178_/_0.55)]">
               <Caption className="font-semibold text-cyan-700">
                 대표 스펙
               </Caption>
-              <Headline className="mt-2 text-xl font-semibold text-cyan-950">
+              <Headline className="mt-2 text-lg font-semibold text-cyan-950">
                 {highlightRow.value}
               </Headline>
               <Caption className="mt-1 text-cyan-700">
@@ -747,10 +823,10 @@ export function DetailPreview({
             </div>
           ) : null}
 
-          <div className="mt-6 grid gap-3 md:grid-cols-2">
+          <div className={cn(previewItemGridClass, "md:grid-cols-2")}>
             {specRows.map((row, index) => (
               <div
-                className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4"
+                className={cn(previewItemCardClass, "bg-slate-50 px-4 py-4")}
                 key={`${section.id}-spec-${row.label}-${index}`}
               >
                 <Caption className="font-semibold text-slate-500">
@@ -777,28 +853,26 @@ export function DetailPreview({
         as="section"
         id={`detail-section-${section.id}`}
         key={section.id}
-        className="overflow-hidden"
+        className={previewSectionCardClass}
         padding="none"
         shadow="elevated"
       >
-        {renderManagementHeader(section, "Compare 관리")}
-
-        <CardBody className="@container bg-white px-4 py-5 sm:px-5 lg:px-6">
-          <div className="flex flex-wrap items-center gap-2">
+        <CardBody className={cn(previewSectionBodyClass, "@container")}>
+          <div className={previewBadgeRowClass}>
             <Badge tone="primary">COMPARE</Badge>
             <Badge tone="point">WHY THIS</Badge>
           </div>
 
-          <div className="mt-4">
-            <Headline className="text-2xl font-semibold text-slate-950">
+          <div className={previewIntroClass}>
+            <Headline className={previewHeadingClass}>
               {section.title}
             </Headline>
-            <Caption className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            <Caption className={previewDescriptionClass}>
               {section.description}
             </Caption>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 @min-[720px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[720px]:items-stretch">
+          <div className={cn(previewItemGridClass, "grid-cols-1 @min-[720px]:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] @min-[720px]:items-stretch")}>
             {[compare.before, compare.after].map((item, index) => (
               <div
                 className={cn(
@@ -841,7 +915,7 @@ export function DetailPreview({
             </div>
           </div>
 
-          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-[0_10px_24px_-22px_rgb(180_83_9_/_0.55)]">
+          <div className={previewPointCardClass}>
             <div className="grid gap-2 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
               <Badge tone="point">POINT</Badge>
               <Text className="text-sm font-semibold leading-6 text-amber-950 [word-break:keep-all]">
@@ -864,31 +938,29 @@ export function DetailPreview({
         as="section"
         id={`detail-section-${section.id}`}
         key={section.id}
-        className="overflow-hidden"
+        className={previewSectionCardClass}
         padding="none"
         shadow="elevated"
       >
-        {renderManagementHeader(section, "FAQ 관리")}
-
-        <CardBody className="bg-white px-4 py-5 sm:px-5 lg:px-6">
-          <div className="flex flex-wrap items-center gap-2">
+        <CardBody className={previewSectionBodyClass}>
+          <div className={previewBadgeRowClass}>
             <Badge tone="info">FAQ</Badge>
             <Badge tone="secondary">Q&A</Badge>
           </div>
 
-          <div className="mt-4">
-            <Headline className="text-2xl font-semibold text-slate-950">
+          <div className={previewIntroClass}>
+            <Headline className={previewHeadingClass}>
               {section.title}
             </Headline>
-            <Caption className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            <Caption className={previewDescriptionClass}>
               {section.description}
             </Caption>
           </div>
 
-          <div className="mt-5 grid gap-3">
+          <div className={previewItemGridClass}>
             {faqItems.map((item, index) => (
               <div
-                className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 shadow-[0_12px_26px_-24px_rgb(15_23_42_/_0.7)]"
+                className={cn(previewItemCardClass, "bg-slate-50 px-4 py-4")}
                 key={`${section.id}-faq-${item.question}-${index}`}
               >
                 <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
@@ -929,14 +1001,12 @@ export function DetailPreview({
         as="section"
         id={`detail-section-${section.id}`}
         key={section.id}
-        className="overflow-hidden"
+        className={previewSectionCardClass}
         padding="none"
         shadow="elevated"
       >
-        {renderManagementHeader(section, "CTA 관리")}
-
-        <CardBody className="bg-[linear-gradient(135deg,#0f172a_0%,#155e75_58%,#f59e0b_150%)] px-5 py-10 text-center text-white sm:px-7 sm:py-12">
-          <div className="flex flex-wrap justify-center gap-2">
+        <CardBody className={cn(previewGradientClass, "px-5 py-10 text-center text-white sm:px-7 sm:py-12")}>
+          <div className={cn(previewBadgeRowClass, "justify-center")}>
             <Badge className="border-white/25 bg-white/15 text-white" tone="neutral">
               CTA
             </Badge>
@@ -959,7 +1029,7 @@ export function DetailPreview({
               type="button"
               size="lg"
               variant="primary"
-              className="min-h-20 w-full bg-amber-300 px-10 text-2xl font-semibold text-slate-950 shadow-[0_34px_70px_-22px_rgb(0_0_0_/_0.95)] ring-4 ring-amber-100 hover:bg-amber-200"
+              className="min-h-16 w-full bg-amber-300 px-8 text-xl font-semibold text-slate-950 shadow-lg shadow-slate-950/30 ring-1 ring-amber-100 hover:bg-amber-200 sm:min-h-20 sm:px-10 sm:text-2xl"
             >
               {cta.buttonLabel}
             </Button>
@@ -979,14 +1049,12 @@ export function DetailPreview({
       as="section"
       id={`detail-section-${section.id}`}
       key={section.id}
-      className="overflow-hidden"
+      className={previewSectionCardClass}
       padding="none"
     >
-      {renderManagementHeader(section, `${section.kind.toUpperCase()} 관리`)}
-
-      <CardBody className="px-5 py-5">
+      <CardBody className={previewSectionBodyClass}>
         <div className="rounded-md border border-slate-200 border-l-4 border-l-cyan-600 bg-slate-50 px-4 py-3">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className={previewBadgeRowClass}>
             <Badge tone="info">{section.kind}</Badge>
           </div>
           <Text as="h3" className="mt-3" variant="headline">
@@ -1001,42 +1069,9 @@ export function DetailPreview({
 
   return (
     <Card as="article" className="min-w-0 overflow-hidden rounded-lg" padding="none">
-      <CardHeader className="border-b-0 bg-[linear-gradient(135deg,#0f172a_0%,#155e75_58%,#f59e0b_145%)] px-6 py-7 text-white">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className="border-white/25 bg-white/15 text-white" tone="neutral">
-                PREVIEW
-              </Badge>
-              <Badge className="border-amber-200/40 bg-amber-200/20 text-amber-50" tone="point">
-                {sections.length} SECTIONS
-              </Badge>
-              <Badge className="border-cyan-100/30 bg-cyan-100/15 text-cyan-50" tone="info">
-                {TONE_LABELS[product.tone]}
-              </Badge>
-            </div>
-            <Headline className="mt-4 text-2xl font-semibold text-white">
-              {productLabel}
-            </Headline>
-            <Caption className="mt-2 max-w-xl text-sm leading-6 text-cyan-50/85">
-              {projectName} · {product.category}
-            </Caption>
-          </div>
-          <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-            <Button
-              type="button"
-              size="lg"
-              variant="primary"
-              onClick={() => copyText(formatAllSectionsForCopy(sections), "all")}
-            >
-              전체 복사
-            </Button>
-            {renderCopyStatus("all")}
-          </div>
-        </div>
-      </CardHeader>
+      {renderPreviewToolbar()}
 
-      <CardBody className={cn(previewContainerClass, "grid gap-6 py-6")}>
+      <CardBody className={cn(previewContainerClass, "grid gap-5 py-5 sm:gap-6 sm:py-6")}>
         {sections.map((section, index) => {
           if (index === 0) {
             return renderHeroSection(section);
@@ -1065,7 +1100,7 @@ export function DetailPreview({
           return renderDefaultSection(section);
         })}
 
-        <footer className="mt-10 border-t border-slate-100 pt-6 text-xs leading-6 text-slate-500">
+        <footer className="mt-4 border-t border-slate-100 pt-5 text-xs leading-6 text-slate-500 sm:mt-6">
           <p>금지 표현: {product.forbiddenPhrases || "입력 없음"}</p>
           <p>내부 메모: {product.notes || "입력 없음"}</p>
         </footer>
