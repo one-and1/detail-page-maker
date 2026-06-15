@@ -32,6 +32,7 @@ import type {
   DetailSection,
   GeneratedSectionCopy,
   GenerationMode,
+  ProductImageAsset,
   ProductInfo,
 } from "@/src/types";
 
@@ -46,6 +47,8 @@ const initialUsageStats: UsageStats = {
   estimatedSavedRequests: 0,
   lastGeneratedAt: null,
 };
+
+const MAX_PRODUCT_IMAGE_BYTES = 4 * 1024 * 1024;
 
 const initialProduct: ProductInfo = {
   projectName: "신제품 상세페이지 초안",
@@ -64,6 +67,7 @@ const initialProduct: ProductInfo = {
 export function DetailWorkspace() {
   const pendingGenerationKeysRef = useRef<Set<string>>(new Set());
   const [product, setProduct] = useState<ProductInfo>(initialProduct);
+  const [productImage, setProductImage] = useState<ProductImageAsset | null>(null);
   const [sections, setSections] = useState<DetailSection[]>(() =>
     makeSections(initialProduct),
   );
@@ -84,6 +88,7 @@ export function DetailWorkspace() {
 
       if (draft) {
         setProduct(draft.product);
+        setProductImage(draft.productImage ?? null);
         setSections(draft.sections);
         setLastSavedAt(draft.updatedAt);
         setStorageMessage("마지막 저장본을 불러왔습니다.");
@@ -136,6 +141,44 @@ export function DetailWorkspace() {
     setProduct(nextProduct);
     setSections(makeSections(nextProduct));
     setStorageMessage("저장되지 않은 변경사항이 있습니다.");
+  };
+
+  const handleProductImageUpload = (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      setStorageMessage("Image upload failed. Please select an image file.");
+      return;
+    }
+
+    if (file.size > MAX_PRODUCT_IMAGE_BYTES) {
+      setStorageMessage("Image upload failed. Please select an image under 4MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = reader.result;
+
+      if (typeof result !== "string" || !result.startsWith("data:image/")) {
+        setStorageMessage("Image upload failed. The selected file could not be read.");
+        return;
+      }
+
+      setProductImage({
+        dataUrl: result,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        updatedAt: new Date().toISOString(),
+      });
+      setStorageMessage("Product image updated. Save the draft to keep it.");
+    };
+
+    reader.onerror = () => {
+      setStorageMessage("Image upload failed. The selected file could not be read.");
+    };
+
+    reader.readAsDataURL(file);
   };
 
   const handleSectionCopyChange = (
@@ -292,7 +335,7 @@ export function DetailWorkspace() {
   };
 
   const handleSave = () => {
-    const draft = saveProjectDraft({ product, sections });
+    const draft = saveProjectDraft({ product, sections, productImage });
 
     if (draft) {
       setLastSavedAt(draft.updatedAt);
@@ -311,6 +354,7 @@ export function DetailWorkspace() {
     }
 
     setProduct(draft.product);
+    setProductImage(draft.productImage ?? null);
     setSections(draft.sections);
     setLastSavedAt(draft.updatedAt);
     setStorageMessage("저장본을 불러왔습니다.");
@@ -327,6 +371,7 @@ export function DetailWorkspace() {
 
     clearProjectDraft();
     setProduct(initialProduct);
+    setProductImage(null);
     setSections(makeSections(initialProduct));
     setLastSavedAt(null);
     setStorageMessage("작업을 초기화했습니다.");
@@ -468,7 +513,9 @@ export function DetailWorkspace() {
           <SectionListPanel sections={sections} />
           <DetailPreview
             product={product}
+            productImage={productImage}
             sections={sections}
+            onProductImageUpload={handleProductImageUpload}
             onSectionCopyChange={handleSectionCopyChange}
             onSectionRegenerate={handleSectionRegenerate}
           />

@@ -1,4 +1,4 @@
-import type { PersistedProject, ProductInfo } from "@/src/types";
+import type { PersistedProject, ProductImageAsset, ProductInfo } from "@/src/types";
 import { normalizeTone } from "@/src/lib/tone-system";
 
 const STORAGE_KEY = "detail-page-maker:project-draft";
@@ -45,6 +45,33 @@ function normalizeProductInfo(product: Partial<ProductInfo>): ProductInfo {
   };
 }
 
+function normalizeProductImage(value: unknown): ProductImageAsset | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const image = value as Partial<ProductImageAsset>;
+
+  if (
+    typeof image.dataUrl !== "string" ||
+    !image.dataUrl.startsWith("data:image/") ||
+    typeof image.name !== "string" ||
+    typeof image.type !== "string" ||
+    typeof image.size !== "number" ||
+    typeof image.updatedAt !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    dataUrl: image.dataUrl,
+    name: image.name,
+    type: image.type,
+    size: image.size,
+    updatedAt: image.updatedAt,
+  };
+}
+
 export function saveProjectDraft(
   draft: Omit<PersistedProject, "updatedAt" | "schemaVersion">,
 ): PersistedProject | null {
@@ -88,7 +115,11 @@ export function loadProjectDraft(): PersistedProject | null {
     const parsedDraft = JSON.parse(storedDraft);
 
     return isPersistedProject(parsedDraft)
-      ? { ...parsedDraft, product: normalizeProductInfo(parsedDraft.product) }
+      ? {
+          ...parsedDraft,
+          product: normalizeProductInfo(parsedDraft.product),
+          productImage: normalizeProductImage(parsedDraft.productImage),
+        }
       : null;
   } catch {
     return null;

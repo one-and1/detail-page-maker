@@ -33,9 +33,18 @@ export interface DetailSection {
   copy: string;
 }
 
+export interface ProductImageAsset {
+  dataUrl: string;
+  name: string;
+  type: string;
+  size: number;
+  updatedAt: string;
+}
+
 export interface PersistedProject {
   product: ProductInfo;
   sections: DetailSection[];
+  productImage?: ProductImageAsset | null;
   updatedAt: string;
   schemaVersion: number;
 }

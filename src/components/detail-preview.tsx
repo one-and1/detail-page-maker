@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { Badge } from "@/src/components/ui/badge";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/src/components/ui/card";
@@ -8,11 +9,13 @@ import { Caption, Headline, Text } from "@/src/components/ui/typography";
 import { cn } from "@/src/lib/class-names";
 import { fieldControlClass, previewContainerClass } from "@/src/lib/design-system";
 import { TONE_LABELS } from "@/src/lib/tone-system";
-import type { DetailSection, ProductInfo } from "@/src/types";
+import type { DetailSection, ProductImageAsset, ProductInfo } from "@/src/types";
 
 type Props = {
   product: ProductInfo;
+  productImage: ProductImageAsset | null;
   sections: DetailSection[];
+  onProductImageUpload: (file: File) => void;
   onSectionCopyChange: (sectionId: DetailSection["id"], copy: string) => void;
   onSectionRegenerate: (sectionId: DetailSection["id"]) => void | Promise<void>;
 };
@@ -414,7 +417,9 @@ const getCtaContent = (
 
 export function DetailPreview({
   product,
+  productImage,
   sections,
+  onProductImageUpload,
   onSectionCopyChange,
   onSectionRegenerate,
 }: Props) {
@@ -427,6 +432,7 @@ export function DetailPreview({
   const [draftCopy, setDraftCopy] = useState("");
   const [copyStatus, setCopyStatus] = useState<CopyStatus>(null);
   const copyMessageTimeoutRef = useRef<number | null>(null);
+  const productImageInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -494,6 +500,23 @@ export function DetailPreview({
     }
   };
 
+  const openProductImagePicker = () => {
+    productImageInputRef.current?.click();
+  };
+
+  const handleProductImageInputChange = (
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    onProductImageUpload(file);
+    event.target.value = "";
+  };
+
   const scrollToUspSection = () => {
     document
       .getElementById("detail-section-usp")
@@ -546,6 +569,20 @@ export function DetailPreview({
 
           <div className="flex min-w-0 flex-col items-start gap-2 lg:items-end">
             <div className="flex flex-wrap gap-2">
+              <input
+                ref={productImageInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleProductImageInputChange}
+              />
+              <Button
+                type="button"
+                size="md"
+                onClick={openProductImagePicker}
+              >
+                Upload image
+              </Button>
               <Button
                 type="button"
                 size="md"
@@ -696,11 +733,27 @@ export function DetailPreview({
             </div>
 
             <div className="mt-8 rounded-lg border border-white/15 bg-white/10 p-3">
-              <div className="flex min-h-36 items-center justify-center rounded-md border border-dashed border-white/25 bg-white/10">
-                <Caption className="text-sm font-semibold tracking-wide text-cyan-50/70">
-                  Product Image
-                </Caption>
-              </div>
+              {productImage ? (
+                <div className="relative aspect-square overflow-hidden rounded-md border border-white/20 bg-white/10">
+                  <Image
+                    src={productImage.dataUrl}
+                    alt={`${heroProductName} product image`}
+                    fill
+                    sizes="(min-width: 1280px) 704px, (min-width: 1024px) 50vw, 100vw"
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              ) : (
+                <div className="flex aspect-square min-h-36 flex-col items-center justify-center rounded-md border border-dashed border-white/25 bg-white/10 px-4 text-center">
+                  <Caption className="text-sm font-semibold tracking-wide text-cyan-50/80">
+                    Upload image
+                  </Caption>
+                  <Caption className="mt-2 text-xs leading-5 text-cyan-50/60">
+                    1:1 square recommended
+                  </Caption>
+                </div>
+              )}
             </div>
 
             <Caption className="mt-5 text-cyan-50/55">
