@@ -45,11 +45,108 @@ const previewPrimaryCtaClass =
 
 const FALLBACK_PROJECT_NAME = "새 프로젝트";
 
-const formatSectionForCopy = (section: DetailSection) =>
-  `${section.title}\n\n${section.copy.trim()}`;
+const normalizeCopyText = (text: string) =>
+  text
+    .normalize("NFC")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
-const formatAllSectionsForCopy = (sections: DetailSection[]) =>
-  sections.map(formatSectionForCopy).join("\n\n---\n\n");
+const joinCopyBlocks = (blocks: Array<string | null | undefined>) =>
+  normalizeCopyText(blocks.map((block) => block?.trim()).filter(Boolean).join("\n\n"));
+
+const formatPreviewSectionForCopy = (
+  section: DetailSection,
+  product: ProductInfo,
+  index: number,
+) => {
+  if (index === 0) {
+    const brandName = product.brandName.trim() || "브랜드";
+    const projectName = product.projectName.trim() || FALLBACK_PROJECT_NAME;
+    const heroProductName = product.productName.trim() || projectName;
+
+    return joinCopyBlocks([
+      brandName,
+      heroProductName,
+      getHeroSubCopy(section, product),
+    ]);
+  }
+
+  if (section.kind === "usp") {
+    const uspCards = getUspCards(section, product);
+    const pointTitle = uspCards[0]?.title || "가볍고 선명하게";
+
+    return joinCopyBlocks([
+      section.title,
+      section.description,
+      uspCards
+        .map((item) => `${item.title}\n${item.description}`)
+        .join("\n\n"),
+      pointTitle,
+    ]);
+  }
+
+  if (section.kind === "spec") {
+    const specRows = getSpecRows(section, product);
+    const highlightRow = getSpecHighlight(specRows);
+
+    return joinCopyBlocks([
+      section.title,
+      section.description,
+      highlightRow ? `${highlightRow.label}\n${highlightRow.value}` : null,
+      specRows.map((row) => `${row.label}: ${row.value}`).join("\n"),
+    ]);
+  }
+
+  if (section.kind === "comparison") {
+    const compare = getCompareContent(section, product);
+
+    return joinCopyBlocks([
+      section.title,
+      section.description,
+      `${compare.before.heading}\n${compare.before.keywords.join("\n")}`,
+      `${compare.after.heading}\n${compare.after.keywords.join("\n")}`,
+      compare.point,
+    ]);
+  }
+
+  if (section.kind === "faq") {
+    const faqItems = getFaqItems(section, product);
+
+    return joinCopyBlocks([
+      section.title,
+      section.description,
+      faqItems
+        .map((item) => `Q. ${item.question}\nA. ${item.answer}`)
+        .join("\n\n"),
+    ]);
+  }
+
+  if (section.kind === "cta") {
+    const brandName = product.brandName.trim() || "브랜드";
+    const cta = getCtaContent(section, product);
+
+    return joinCopyBlocks([
+      brandName,
+      cta.subCopy,
+      cta.buttonLabel,
+      cta.note,
+    ]);
+  }
+
+  return joinCopyBlocks([section.title, section.copy]);
+};
+
+const formatAllSectionsForCopy = (
+  sections: DetailSection[],
+  product: ProductInfo,
+) =>
+  sections
+    .map((section, index) => formatPreviewSectionForCopy(section, product, index))
+    .join("\n\n---\n\n");
 
 const stripListMarker = (line: string) =>
   line.replace(/^[-*•\d.)\s]+/, "").trim();
@@ -528,9 +625,11 @@ export function DetailPreview({
   const heroProductName = product.productName.trim() || projectName;
   const productLabel =
     `${product.brandName} ${product.productName}`.trim() || projectName;
+  const selectedSectionIndex = sections.findIndex(
+    (section) => section.id === selectedSectionId,
+  );
   const selectedSection =
-    sections.find((section) => section.id === selectedSectionId) ??
-    sections[0] ??
+    (selectedSectionIndex >= 0 ? sections[selectedSectionIndex] : sections[0]) ??
     null;
 
   const renderCopyStatus = (target: CopyTarget) =>
@@ -587,7 +686,7 @@ export function DetailPreview({
                 type="button"
                 size="md"
                 variant="primary"
-                onClick={() => copyText(formatAllSectionsForCopy(sections), "all")}
+                onClick={() => copyText(formatAllSectionsForCopy(sections, product), "all")}
               >
                 전체 복사
               </Button>
@@ -597,7 +696,14 @@ export function DetailPreview({
                 disabled={!selectedSection}
                 onClick={() =>
                   selectedSection
-                    ? copyText(formatSectionForCopy(selectedSection), selectedSection.id)
+                    ? copyText(
+                        formatPreviewSectionForCopy(
+                          selectedSection,
+                          product,
+                          selectedSectionIndex >= 0 ? selectedSectionIndex : 0,
+                        ),
+                        selectedSection.id,
+                      )
                     : undefined
                 }
               >
