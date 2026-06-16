@@ -159,11 +159,15 @@ const getContentLines = (copy: string) =>
 
 const getHeroSubCopy = (section: DetailSection, product: ProductInfo) => {
   const productLabel = `${product.brandName} ${product.productName}`.trim();
+  const productName = product.productName.trim();
   const candidates = getContentLines(section.copy);
 
   return (
     candidates.find(
-      (line) => line !== productLabel && line !== section.title,
+      (line) =>
+        line !== productLabel &&
+        line !== productName &&
+        line !== section.title,
     ) ||
     section.description ||
     product.usp ||
@@ -232,7 +236,7 @@ const toUspItem = (line: string): UspItem => {
     .map((item) => item.trim())
     .filter(Boolean);
   const title = getShortUspTitle(firstSentence || line);
-  const description = remainingSentences.join(" ") || line;
+  const description = remainingSentences.join(" ");
 
   return {
     title,
@@ -242,7 +246,10 @@ const toUspItem = (line: string): UspItem => {
 
 const getUspItems = (section: DetailSection, product: ProductInfo) => {
   const lines = getContentLines(section.copy).filter(
-    (line) => line !== section.title,
+    (line) =>
+      line !== section.title &&
+      line !== "이 상품의 핵심 포인트" &&
+      line !== "핵심 포인트",
   );
   const source = lines.length > 0 ? lines : getContentLines(product.usp);
 
