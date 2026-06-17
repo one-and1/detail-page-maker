@@ -11,7 +11,6 @@ import { SectionContainer } from "@/src/components/ui/section-container";
 import {
   clearSectionCopyCache,
   createSectionCacheKey,
-  debugSectionCache,
   getCachedSectionCopy,
   saveCachedSectionCopy,
 } from "@/src/lib/cache";
@@ -213,13 +212,6 @@ export function DetailWorkspace() {
     });
     const cachedCopy = getCachedSectionCopy(cacheKey);
 
-    debugSectionCache({
-      cacheKey,
-      sectionKind: targetSection.kind,
-      generationType: generationMode,
-      hit: !!cachedCopy,
-    });
-
     if (cachedCopy) {
       setUsageStats(recordCacheHit(cachedCopy.createdAt));
       setSections((currentSections) =>
@@ -290,13 +282,6 @@ export function DetailWorkspace() {
     } finally {
       pendingGenerationKeysRef.current.delete(cacheKey);
     }
-
-    debugSectionCache({
-      cacheKey,
-      sectionKind: generatedSection.sectionKind,
-      generationType: generationMode,
-      hit: false,
-    });
 
     const saved = saveCachedSectionCopy({
       key: cacheKey,

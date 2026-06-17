@@ -511,9 +511,10 @@ const getCtaContent = (
   product: ProductInfo,
 ): CtaContent => {
   const productName = product.productName.trim() || "이 제품";
+  const editedCopy = normalizeCopyText(section.copy);
 
   return {
-    subCopy: `${productName}을 지금 편하게 경험해보세요`,
+    subCopy: editedCopy || `${productName}을 지금 편하게 경험해보세요`,
     buttonLabel: "구매하기",
     note: "옵션 선택 후 구매 가능합니다.",
   };

@@ -30,14 +30,6 @@ function canUseLocalStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
-function debugCacheLog(label: string, payload: unknown) {
-  if (process.env.NODE_ENV === "production") {
-    return;
-  }
-
-  console.log(label, payload);
-}
-
 function normalizeText(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
@@ -77,14 +69,6 @@ function normalizeCacheEntries(entries: Record<string, unknown>) {
     const entryKey = "key" in entry && typeof entry.key === "string"
       ? entry.key
       : storedKey;
-
-    if (entryKey !== storedKey) {
-      debugCacheLog("[cache-key-mismatch]", {
-        storedKey,
-        entryKey,
-        sameKey: false,
-      });
-    }
 
     normalizedEntries[entryKey] = {
       key: entryKey,
@@ -192,76 +176,20 @@ export function createSectionCacheKey({
 
   const key = `${SECTION_COPY_CACHE_KEY_VERSION}:${generationType}:${sectionKind}:${tone}:${inputHash}`;
 
-  debugCacheLog("[cache-key]", {
-    key,
-    generationType,
-    sectionKind,
-    tone,
-    inputHash,
-  });
-
   return key;
 }
 
 export function getCachedSectionCopy(key: string): CachedSectionCopy | null {
   const store = readCacheStore();
-  const cachedCopy = store.entries[key] ?? null;
-  const storedKeys = Object.keys(store.entries);
-
-  debugCacheLog("[cache-read]", key);
-  debugCacheLog("[cache-read-match]", {
-    hit: !!cachedCopy,
-    readKey: key,
-    storedKey: cachedCopy?.key ?? null,
-    sameKey: cachedCopy?.key === key,
-    storedKeyCount: storedKeys.length,
-    storedKeys,
-  });
-
-  return cachedCopy;
-}
-
-export function debugSectionCache({
-  cacheKey,
-  sectionKind,
-  generationType,
-  hit,
-}: {
-  cacheKey: string;
-  sectionKind: SectionKind;
-  generationType: GenerationType;
-  hit: boolean;
-}) {
-  if (process.env.NODE_ENV === "production") {
-    return;
-  }
-
-  console.debug("[cache-debug]", {
-    cacheKey,
-    sectionKind,
-    generationType,
-    hit,
-  });
+  return store.entries[key] ?? null;
 }
 
 export function saveCachedSectionCopy(entry: CachedSectionCopy) {
   const store = readCacheStore();
 
-  debugCacheLog("[cache-save]", entry.key);
-
   store.entries[entry.key] = entry;
 
-  const saved = writeCacheStore(store);
-  const savedEntry = saved ? readCacheStore().entries[entry.key] ?? null : null;
-
-  debugCacheLog("[cache-save-result]", {
-    saved,
-    savedKey: entry.key,
-    storedKey: savedEntry?.key ?? null,
-    sameKey: savedEntry?.key === entry.key,
-  });
-
-  return saved;
+  return writeCacheStore(store);
 }
 
 export function clearSectionCopyCache() {
